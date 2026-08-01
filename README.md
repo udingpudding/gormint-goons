@@ -35,11 +35,11 @@ candidate, their party, and the affidavit they personally signed.
 All inputs are public. Attribution matters here, so it is stated up front rather than in a
 footer.
 
-| Pillar | Source | Coverage |
+| Pillar | Source | Status |
 |---|---|---|
-| Candidates & criminal cases | [MyNeta](https://myneta.info) — Association for Democratic Reforms (ADR) & National Election Watch | Lok Sabha 2004–2024, state assemblies, electoral bonds |
-| Infrastructure delivery | [Flash Report on Central Sector Projects](https://mospi.gov.in) — Ministry of Statistics & Programme Implementation (MoSPI) | Monthly, projects ≥ ₹150 crore |
-| Parliamentary participation | [MP Track](https://prsindia.org/mptrack) — PRS Legislative Research | 15th–18th Lok Sabha (2009–) |
+| Candidates & criminal cases | [MyNeta](https://myneta.info) — Association for Democratic Reforms (ADR) & National Election Watch | **Collected** — Lok Sabha winners, 2004–2024 |
+| Infrastructure delivery | [Flash Report on Central Sector Projects](https://mospi.gov.in) — Ministry of Statistics & Programme Implementation (MoSPI) | **Blocked** — see below |
+| Parliamentary participation | [MP Track](https://prsindia.org/mptrack) — PRS Legislative Research | Planned — 15th–18th Lok Sabha (2009–) |
 
 ADR compiles candidate affidavits filed with the Election Commission of India. MoSPI Flash
 Reports are compiled from the OCMS portal. Thanks are owed to all three organisations —
@@ -47,6 +47,16 @@ this project is a re-presentation of their work, not a replacement for it.
 
 Note that the parliamentary pillar begins in 2009, not 2004: PRS MP Track does not cover the
 14th Lok Sabha.
+
+### Why MoSPI is not collected
+
+The entire Flash Report archive — confirmed available monthly back to May 2007 — is served
+from `ipm.mospi.gov.in`, whose TLS certificate **expired in January 2026**. Fetching it means
+disabling certificate verification, and this project does not do that. The discovery code is
+written and tested; collection begins if and when the certificate is renewed.
+
+(The `uatipm.mospi.gov.in` mirror that search engines still index is a dead UAT host and
+returns 404 for everything. The live archive is under `ipm.mospi.gov.in`.)
 
 ---
 

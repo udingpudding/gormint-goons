@@ -1,0 +1,114 @@
+"""Command line entry points for the three pipeline stages.
+
+    uv run python -m pipeline archive    # fetch listings into data/raw/
+    uv run python -m pipeline parse      # archived pages -> data/normalized/
+    uv run python -m pipeline publish    # normalized rows -> data/public/
+
+The stages are separate commands rather than one pipeline run because they fail for
+unrelated reasons and recover differently. Archiving is slow, network-bound and polite;
+parsing is fast, local, and re-run every time a format surprise is found. Collapsing them
+would mean a parser fix costs another crawl.
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+
+from pipeline import paths
+from pipeline.archive.crawl import crawl_elections
+from pipeline.archive.fetcher import Fetcher
+from pipeline.archive.manifest import Manifest
+from pipeline.archive.sources import myneta
+from pipeline.transform import normalize as normalize_stage
+from pipeline.transform import publish as publish_stage
+
+log = logging.getLogger("pipeline")
+
+
+def _configure_logging(verbose: bool) -> None:
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(levelname)-7s %(message)s",
+        stream=sys.stderr,
+    )
+
+
+def cmd_archive(args: argparse.Namespace) -> int:
+    paths.ensure_dirs()
+    elections = myneta.LOK_SABHA
+    if args.election:
+        elections = tuple(myneta.ELECTIONS_BY_SLUG[s] for s in args.election)
+
+    views = (myneta.View.WINNERS,) if args.winners_only else myneta.DEFAULT_VIEWS
+
+    manifest = Manifest.load()
+    before = len(manifest)
+
+    with Fetcher(manifest, min_interval=args.delay) as fetcher:
+        try:
+            for summary in crawl_elections(fetcher, elections, views):
+                log.info("%s", summary)
+        finally:
+            # Persist whatever was archived even if the crawl is interrupted; a partial
+            # backfill that remembers its progress is resumable, one that forgets is not.
+            fetcher.save()
+
+    log.info("Manifest: %s entries (%+d)", len(manifest), len(manifest) - before)
+    return 0
+
+
+def cmd_parse(args: argparse.Namespace) -> int:
+    paths.ensure_dirs()
+    written = normalize_stage.normalize_myneta()
+    log.info("Wrote %s candidate rows to %s", written, paths.NORMALIZED)
+    return 0
+
+
+def cmd_publish(args: argparse.Namespace) -> int:
+    paths.ensure_dirs()
+    outputs = publish_stage.publish_all()
+    for name, rows in outputs.items():
+        log.info("Published %s (%s rows)", name, rows)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="pipeline", description=__doc__)
+    parser.add_argument("-v", "--verbose", action="store_true")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    archive = sub.add_parser("archive", help="fetch source documents into data/raw/")
+    archive.add_argument(
+        "--election",
+        action="append",
+        choices=sorted(myneta.ELECTIONS_BY_SLUG),
+        help="restrict to one election; repeatable. Defaults to all.",
+    )
+    archive.add_argument(
+        "--winners-only",
+        action="store_true",
+        help="archive only the winners listing, which is ~30 pages per election rather than ~470",
+    )
+    archive.add_argument(
+        "--delay",
+        type=float,
+        default=1.5,
+        help="seconds between requests to one host (default: 1.5)",
+    )
+    archive.set_defaults(func=cmd_archive)
+
+    parse = sub.add_parser("parse", help="archived pages -> normalized rows")
+    parse.set_defaults(func=cmd_parse)
+
+    publish = sub.add_parser("publish", help="normalized rows -> published Parquet")
+    publish.set_defaults(func=cmd_publish)
+
+    args = parser.parse_args(argv)
+    _configure_logging(args.verbose)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
