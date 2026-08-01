@@ -1,0 +1,55 @@
+[project]
+name = "gormint-goons"
+version = "0.1.0"
+description = "An open data observatory for Indian governance"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { file = "LICENSE" }
+
+dependencies = [
+    # Fetching. httpx for HTTP/2 + timeouts; tenacity for backoff against
+    # government hosts that intermittently 5xx.
+    "httpx>=0.28",
+    "tenacity>=9.0",
+    # Parsing. pdfplumber for MoSPI Flash Report tables; selectolax is a fast
+    # HTML parser for the MyNeta/PRS scrapers in later phases.
+    "pdfplumber>=0.11",
+    "pypdf>=5.1",
+    "selectolax>=0.3.27",
+    # Shaping and publishing.
+    "polars>=1.17",
+    "pyarrow>=18.1",
+    "duckdb>=1.1",
+    # Schema contracts on normalized output.
+    "pydantic>=2.10",
+    "python-dateutil>=2.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "respx>=0.22",
+    "ruff>=0.8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["pipeline/tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "network: hits real remote hosts; deselected by default in CI",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

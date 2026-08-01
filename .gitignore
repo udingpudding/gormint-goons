@@ -1,0 +1,38 @@
+# Archived source documents and intermediates.
+# data/raw/ holds immutable originals fetched from government hosts. It is large
+# and reproducible from the manifest, so it is not committed. See docs/methodology.md.
+data/raw/*
+!data/raw/.gitkeep
+data/normalized/*
+!data/normalized/.gitkeep
+
+# data/public/ IS committed — it is what the site reads.
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# DuckDB scratch
+*.duckdb
+*.duckdb.wal
+
+# Node / Astro
+node_modules/
+web/dist/
+web/.astro/
+.vercel/
+
+# Secrets — never commit. Keys live in .env locally, Actions secrets in CI.
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
