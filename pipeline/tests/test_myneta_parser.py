@@ -18,6 +18,7 @@ import pytest
 
 from pipeline.parsers.myneta import (
     Candidate,
+    parse_age,
     parse_count,
     parse_listing,
     parse_money,
@@ -63,6 +64,25 @@ def test_zero_is_distinguished_from_missing():
 @pytest.mark.parametrize(("text", "expected"), [("0", 0), ("16", 16), (" 3 ", 3), ("Nil", None)])
 def test_case_counts(text, expected):
     assert parse_count(text) == expected
+
+
+@pytest.mark.parametrize(("text", "expected"), [("33", 33), ("25", 25), ("88", 88)])
+def test_real_ages_are_kept(text, expected):
+    assert parse_age(text) == expected
+
+
+@pytest.mark.parametrize("text", ["0", "4", "21", "24", "", "Nil"])
+def test_ages_below_the_constitutional_minimum_are_not_declared(text):
+    """MyNeta writes an undeclared age as 0. Read literally, 165 candidates would be aged
+    zero and every median age would be dragged down by them. Nobody under 25 can sit in the
+    Lok Sabha, so anything below that is a data error rather than a young candidate."""
+    assert parse_age(text) is None
+
+
+def test_zero_age_is_not_confused_with_zero_cases():
+    """A candidate can genuinely have zero criminal cases; none can genuinely be zero."""
+    assert parse_count("0") == 0
+    assert parse_age("0") is None
 
 
 @pytest.mark.parametrize(

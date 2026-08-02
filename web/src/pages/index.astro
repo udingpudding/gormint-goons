@@ -29,6 +29,11 @@ function pct(value) {
   return value == null ? '—' : `${value.toFixed(1)}%`;
 }
 
+/** An undeclared age must read as absent, not as a number. */
+function years(value) {
+  return value == null ? '—' : `${value}`;
+}
+
 /** Indian numbering: figures are read in lakh and crore, not millions. */
 function rupees(value) {
   if (!value) return '—';
@@ -126,9 +131,10 @@ function rupees(value) {
               <tr>
                 <th scope="col">Party</th>
                 <th scope="col">With a declared case</th>
-                <th scope="col" class="meter"><span class="visually-hidden">Share</span></th>
+                <th class="meter" aria-hidden="true"></th>
                 <th scope="col">Share</th>
                 <th scope="col">Median assets</th>
+                <th scope="col">Median age</th>
               </tr>
             </thead>
             <tbody>
@@ -152,6 +158,7 @@ function rupees(value) {
                     </td>
                     <td>{pct(row.pct)}</td>
                     <td>{rupees(row.medianAssets)}</td>
+                    <td>{years(row.medianAge)}</td>
                   </tr>
                 ))
               }
@@ -162,9 +169,10 @@ function rupees(value) {
         <p class="ledger__note">
           Parties that elected fewer than {minPartySize} members are left out rather
           than shown as a percentage: three members out of five is "60%", which is true and
-          tells you nothing next to a party that elected two hundred. Assets are self-declared
-          and unaudited, summarised by median so a single very wealthy member does not move
-          the figure.
+          tells you nothing next to a party that elected two hundred. Assets and age are both
+          self-declared and unaudited, summarised by median so a single very wealthy or very
+          old member does not move the figure. An age below 25 cannot be real — nobody
+          younger may sit in the Lok Sabha — so those are read as undeclared, not as zero.
         </p>
       </section>
 
@@ -182,11 +190,10 @@ function rupees(value) {
                   <tr>
                     <th scope="col">State</th>
                     <th scope="col">With a declared case</th>
-                    <th scope="col" class="meter">
-                      <span class="visually-hidden">Share</span>
-                    </th>
+                    <th class="meter" aria-hidden="true" />
                     <th scope="col">Share</th>
                     <th scope="col">Median assets</th>
+                    <th scope="col">Median age</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -206,6 +213,7 @@ function rupees(value) {
                       </td>
                       <td>{pct(row.pct)}</td>
                       <td>{rupees(row.medianAssets)}</td>
+                      <td>{years(row.medianAge)}</td>
                     </tr>
                   ))}
                 </tbody>

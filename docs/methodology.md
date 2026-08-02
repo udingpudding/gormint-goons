@@ -79,8 +79,23 @@ government, or the contractor, and assigning it to one of them would be an edito
 dressed as a measurement. Party appears only where the link is documentary: a named
 candidate, their party, and the affidavit they personally signed.
 
-**Median, not mean, for assets.** A single billionaire candidate would otherwise move a
-party's headline figure by an order of magnitude.
+**Median, not mean, for assets and age.** A single billionaire candidate would otherwise move
+a party's headline figure by an order of magnitude.
+
+## Age
+
+Self-declared, like everything else on the affidavit, and reported as a median alongside
+assets.
+
+MyNeta writes an undeclared age as `0` rather than leaving the field empty. Read literally,
+165 candidates in this dataset are aged zero, and a further three are aged 4, 21 and 24.
+Article 84(b) of the Constitution sets 25 as the minimum age to sit in the Lok Sabha, so any
+value below it is a data error rather than a young candidate, and is treated as not declared.
+
+Left uncorrected, those zeros would drag every median age down while looking perfectly
+plausible — the same failure mode as reading an undeclared asset figure as ₹0.
+
+Median age of members elected has risen from 52 in 2004 to 56 in 2024.
 
 ## How the numbers are produced
 

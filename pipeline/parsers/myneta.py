@@ -120,6 +120,25 @@ def parse_count(text: str) -> int | None:
     return int(match.group()) if match else None
 
 
+#: Article 84(b) of the Constitution sets the minimum age to sit in the Lok Sabha. Anything
+#: below it is a data error rather than a young candidate.
+MINIMUM_AGE = 25
+
+
+def parse_age(text: str) -> int | None:
+    """Read a declared age, rejecting values that cannot be real.
+
+    MyNeta writes an undeclared age as ``0`` rather than leaving the cell empty, and a
+    handful of rows carry ages like 4 or 21. Read literally, 165 candidates would be aged
+    zero and every median would be dragged down by them. Below the constitutional minimum
+    the value is treated as not declared.
+    """
+    value = parse_count(text)
+    if value is None or value < MINIMUM_AGE:
+        return None
+    return value
+
+
 def split_constituency(text: str) -> tuple[str, str | None]:
     """Separate a seat's name from its reservation, e.g. ``JALANDHAR (SC)``."""
     cleaned = _normalise_space(text)
@@ -364,7 +383,7 @@ def parse_constituency(
                 state=state,
                 constituency_id=seat.constituency_id,
                 candidate_id=candidate_id,
-                age=parse_count(text[index["age"]]) if "age" in index else None,
+                age=parse_age(text[index["age"]]) if "age" in index else None,
                 is_bye_election=is_bye_election,
             )
         )

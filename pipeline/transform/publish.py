@@ -190,6 +190,12 @@ def reconcile(everything: pl.DataFrame) -> pl.DataFrame:
 # -- site payload ----------------------------------------------------------------------
 
 
+def _int_or_none(value) -> int | None:
+    """Medians come back as floats. Half a year of age is not a meaningful distinction, and
+    a null must survive as null rather than becoming zero."""
+    return None if value is None else round(value)
+
+
 def _write_site_json(
     totals: pl.DataFrame, parties: pl.DataFrame, states: pl.DataFrame
 ) -> dict[str, int]:
@@ -213,6 +219,7 @@ def _write_site_json(
             "withCases": row["with_declared_cases"],
             "analysed": row["candidates"],
             "medianAssets": int(row["median_assets_rupees"] or 0),
+            "medianAge": _int_or_none(row["median_age"]),
             "contestedPct": fielded.get(row["election_year"], {}).get("pct_with_declared_cases"),
             "contested": fielded.get(row["election_year"], {}).get("candidates"),
         }
@@ -239,6 +246,7 @@ def _write_site_json(
                 "withCases": row["with_declared_cases"],
                 "analysed": row["candidates"],
                 "medianAssets": int(row["median_assets_rupees"] or 0),
+                "medianAge": _int_or_none(row["median_age"]),
             }
             for row in selected
         ]
