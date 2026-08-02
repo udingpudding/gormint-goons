@@ -18,6 +18,7 @@ from it.
 
 from __future__ import annotations
 
+import json
 import logging
 
 import polars as pl
@@ -26,6 +27,10 @@ from pipeline import paths
 from pipeline.transform.normalize import CANDIDATES_PARQUET
 
 log = logging.getLogger(__name__)
+
+#: The site reads these directly so the headline paints without loading a query engine.
+#: Small enough to inline; everything larger stays in Parquet for the explore view.
+SITE_DATA = paths.PUBLIC / "site"
 
 #: Minimum candidates before a rate is published. Percentages over three candidates are
 #: noise that reads as signal, and small parties would otherwise dominate any sort.
@@ -42,15 +47,78 @@ def publish_all() -> dict[str, int]:
     candidates = pl.read_parquet(CANDIDATES_PARQUET)
     paths.PUBLIC.mkdir(parents=True, exist_ok=True)
 
+    totals = election_totals(candidates)
+    parties = party_election_metrics(candidates)
+
     outputs: dict[str, int] = {}
     for name, frame in (
         ("candidates.parquet", _candidates_table(candidates)),
-        ("party_election.parquet", party_election_metrics(candidates)),
-        ("election_totals.parquet", election_totals(candidates)),
+        ("party_election.parquet", parties),
+        ("election_totals.parquet", totals),
     ):
         frame.write_parquet(paths.PUBLIC / name)
         outputs[name] = frame.height
+
+    outputs |= _write_site_json(totals, parties)
     return outputs
+
+
+def _write_site_json(totals: pl.DataFrame, parties: pl.DataFrame) -> dict[str, int]:
+    """Emit the small JSON the headline page reads.
+
+    Kept separate from the Parquet because the two serve different jobs: the page needs a few
+    hundred bytes on first paint, while the explore view needs columnar data it can query.
+    Loading a WASM query engine to render five numbers would be the wrong trade.
+    """
+    SITE_DATA.mkdir(parents=True, exist_ok=True)
+
+    elected = totals.filter(pl.col("cohort") == "won").sort("election_year")
+    timeline = [
+        {
+            "year": row["election_year"],
+            "pct": row["pct_with_declared_cases"],
+            "withCases": row["with_declared_cases"],
+            "analysed": row["candidates_analysed"],
+            "medianAssets": int(row["median_assets_rupees"] or 0),
+            "totalCases": row["total_declared_cases"],
+        }
+        for row in elected.to_dicts()
+    ]
+
+    latest_year = max((row["year"] for row in timeline), default=None)
+    by_party = (
+        parties.filter(
+            (pl.col("cohort") == "won")
+            & (pl.col("election_year") == latest_year)
+            & (pl.col("pct_with_declared_cases").is_not_null())
+        )
+        .sort("candidates_analysed", descending=True)
+        .to_dicts()
+    )
+    party_rows = [
+        {
+            "party": row["party"],
+            "pct": row["pct_with_declared_cases"],
+            "withCases": row["with_declared_cases"],
+            "analysed": row["candidates_analysed"],
+            "medianAssets": int(row["median_assets_rupees"] or 0),
+        }
+        for row in by_party
+    ]
+
+    # Deliberately carries no build timestamp: it would change on every run and fill the
+    # git history with diffs that say nothing. The manifest already records when each
+    # source document was retrieved.
+    payload = {
+        "latestYear": latest_year,
+        "minPartySize": MIN_CANDIDATES_FOR_RATE,
+        "timeline": timeline,
+        "parties": party_rows,
+    }
+    (SITE_DATA / "headline.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    return {"site/headline.json": len(timeline) + len(party_rows)}
 
 
 def _candidates_table(candidates: pl.DataFrame) -> pl.DataFrame:

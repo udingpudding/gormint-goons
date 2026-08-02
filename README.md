@@ -102,6 +102,22 @@ web/           Astro dashboard
 docs/          methodology
 ```
 
+## Running it
+
+```sh
+uv sync                                   # pipeline dependencies
+uv run python -m pipeline archive --winners-only   # fetch listings
+uv run python -m pipeline parse           # archived pages -> normalized rows
+uv run python -m pipeline publish         # normalized rows -> data/public/
+uv run pytest                             # tests
+
+cd web && npm install && npm run dev      # the site, at localhost:4321
+```
+
+The three pipeline stages are separate commands on purpose. Archiving is slow, polite and
+network-bound; parsing is fast and local and gets re-run every time a format surprise turns
+up. Collapsing them would mean every parser fix cost another crawl.
+
 ---
 
 ## Scraping conduct

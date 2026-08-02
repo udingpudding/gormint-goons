@@ -1,0 +1,90 @@
+{
+  "latestYear": 2024,
+  "minPartySize": 10,
+  "timeline": [
+    {
+      "year": 2004,
+      "pct": 23.9,
+      "withCases": 109,
+      "analysed": 457,
+      "medianAssets": 5517697,
+      "totalCases": 385
+    },
+    {
+      "year": 2009,
+      "pct": 29.5,
+      "withCases": 142,
+      "analysed": 482,
+      "medianAssets": 14151539,
+      "totalCases": 451
+    },
+    {
+      "year": 2014,
+      "pct": 34.5,
+      "withCases": 166,
+      "analysed": 481,
+      "medianAssets": 33959072,
+      "totalCases": 577
+    },
+    {
+      "year": 2019,
+      "pct": 43.8,
+      "withCases": 211,
+      "analysed": 482,
+      "medianAssets": 49181115,
+      "totalCases": 951
+    },
+    {
+      "year": 2024,
+      "pct": 45.5,
+      "withCases": 220,
+      "analysed": 483,
+      "medianAssets": 71664809,
+      "totalCases": 1188
+    }
+  ],
+  "parties": [
+    {
+      "party": "BJP",
+      "pct": 37.1,
+      "withCases": 78,
+      "analysed": 210,
+      "medianAssets": 69669686
+    },
+    {
+      "party": "INC",
+      "pct": 48.4,
+      "withCases": 44,
+      "analysed": 91,
+      "medianAssets": 85341885
+    },
+    {
+      "party": "SP",
+      "pct": 61.8,
+      "withCases": 21,
+      "analysed": 34,
+      "medianAssets": 73621072
+    },
+    {
+      "party": "AITC",
+      "pct": 46.2,
+      "withCases": 12,
+      "analysed": 26,
+      "medianAssets": 54607374
+    },
+    {
+      "party": "DMK",
+      "pct": 61.9,
+      "withCases": 13,
+      "analysed": 21,
+      "medianAssets": 148658298
+    },
+    {
+      "party": "TDP",
+      "pct": 46.2,
+      "withCases": 6,
+      "analysed": 13,
+      "medianAssets": 233073561
+    }
+  ]
+}

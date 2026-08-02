@@ -1,0 +1,204 @@
+---
+import '@fontsource-variable/newsreader';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import '../styles/global.css';
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// Read the published figures at build time. The site is static: no query engine, no
+// database, no request-time work. The heavier candidate-level Parquet stays out of this
+// page — loading a WASM engine to render five numbers would be the wrong trade.
+//
+// Resolved from the working directory rather than import.meta.url: this frontmatter is
+// bundled into dist/.prerender/ before it runs, so a URL relative to the module would
+// resolve against the build output instead of the source tree.
+const dataPath = resolve(process.cwd(), '../data/public/site/headline.json');
+const data = JSON.parse(readFileSync(dataPath, 'utf-8'));
+
+const { timeline, parties, latestYear, minPartySize } = data;
+const latest = timeline[timeline.length - 1];
+const earliest = timeline[0];
+
+/** Indian numbering: figures are read in lakh and crore, not millions. */
+function rupees(value) {
+  if (!value) return '—';
+  if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
+  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
+  return `₹${value.toLocaleString('en-IN')}`;
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gormint Goons — declared criminal cases in the Lok Sabha, 2004–2024</title>
+    <meta
+      name="description"
+      content={`Members of the Lok Sabha who declared a pending criminal case against themselves rose from ${earliest.pct}% in ${earliest.year} to ${latest.pct}% in ${latest.year}. Compiled from candidate affidavits via ADR.`}
+    />
+  </head>
+
+  <body>
+    <div class="shell">
+      <header class="masthead">
+        <p class="masthead__stamp">Record of declarations</p>
+        <h1 class="masthead__title">Gormint&nbsp;Goons</h1>
+        <p class="masthead__standfirst">
+          What candidates for the Lok Sabha swore about themselves — pending criminal cases,
+          assets, liabilities — taken from the affidavits they filed with the Election
+          Commission, {earliest.year} to {latest.year}.
+        </p>
+        <hr class="masthead__rule" />
+      </header>
+
+      <section class="record">
+        <p class="caption">Field 1 — Members elected with a declared criminal case</p>
+        <h2 class="record__lede">
+          Among MPs whose affidavits were analysed, the share declaring a pending case has
+          risen at every general election since {earliest.year}.
+        </h2>
+
+        <div class="cells">
+          {
+            timeline.map((row, i) => (
+              <article class={`cell${row.year === latestYear ? ' cell--latest' : ''}`}>
+                <p class="cell__year">
+                  <span>{row.year}</span>
+                  {row.year === latestYear && <span class="cell__mark">Latest</span>}
+                </p>
+                <div class="frac">
+                  <p class="frac__value">
+                    {row.pct}
+                    <sup>%</sup>
+                  </p>
+                  <div class="frac__rule" style={`animation-delay:${140 + i * 110}ms`} />
+                  <p class="frac__of">
+                    <b>{row.withCases}</b> of {row.analysed} analysed
+                  </p>
+                </div>
+              </article>
+            ))
+          }
+        </div>
+
+        <p class="record__note">
+          Each figure is a share of the MPs whose affidavits the Association for Democratic
+          Reforms was able to analyse — not of all 543 seats. The counts under the rule are
+          the actual numbers, and they are printed because a percentage without them is not a
+          fact you can check. A declared case is one the member disclosed as pending against
+          them. It is not a conviction.
+        </p>
+      </section>
+
+      <section class="ledger">
+        <div class="ledger__head">
+          <h2 class="ledger__title">By party</h2>
+          <p class="caption">{latestYear} · members elected · sorted by size</p>
+        </div>
+
+        <div class="scroller">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Party</th>
+                <th scope="col">With a declared case</th>
+                <th scope="col" class="meter"><span class="visually-hidden">Share</span></th>
+                <th scope="col">Share</th>
+                <th scope="col">Median assets</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                parties.map((row) => (
+                  <tr>
+                    <td class="party">{row.party}</td>
+                    <td>
+                      <b>{row.withCases}</b> <span class="of">of {row.analysed}</span>
+                    </td>
+                    {/* The track is the full 0–100% range, so bar length is the share
+                        itself. Scaling to the largest party would make 61.9% draw as a
+                        full bar and read as everyone. */}
+                    <td
+                      class="meter"
+                      title={`${row.party}: ${row.pct}% — ${row.withCases} of ${row.analysed} analysed`}
+                    >
+                      <div class="meter__track" aria-hidden="true">
+                        <div class="meter__fill" style={`width:${row.pct}%`} />
+                      </div>
+                    </td>
+                    <td>{row.pct}%</td>
+                    <td>{rupees(row.medianAssets)}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <p class="ledger__note">
+          Parties that elected fewer than {minPartySize} analysed members are left out rather
+          than shown as a percentage: three members out of five is "60%", which is true and
+          tells you nothing next to a party that elected two hundred. Assets are self-declared
+          and unaudited, summarised by median so a single very wealthy member does not move
+          the figure.
+        </p>
+      </section>
+
+      <footer class="colophon">
+        <div class="colophon__grid">
+          <div>
+            <h3>Source</h3>
+            <p>
+              Candidate affidavits filed with the Election Commission of India, compiled and
+              published by <strong>ADR and National Election Watch</strong> at
+              <a href="https://myneta.info">myneta.info</a>. This site re-presents their work;
+              it does not replace it.
+            </p>
+          </div>
+          <div>
+            <h3>What this does not do</h3>
+            <p>
+              There is no composite score and no ranking of parties. A blended index mostly
+              encodes the weights chosen to build it, and the argument becomes about the
+              weights instead of the data.
+            </p>
+          </div>
+          <div>
+            <h3>Not yet covered</h3>
+            <p>
+              No state-level breakdown: the listings carry no state, and constituency names
+              repeat across states — <strong>Aurangabad</strong> is a seat in both Bihar and
+              Maharashtra. Grouping by name alone would merge different members.
+            </p>
+          </div>
+          <div>
+            <h3>Method</h3>
+            <p>
+              Every figure traces to a stored document with its checksum and retrieval date.
+              Full method, denominators and limitations in
+              <a
+                href="https://github.com/udingpudding/gormint-goons/blob/main/docs/methodology.md"
+                >methodology.md</a
+              >.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <style is:global>
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+    </style>
+  </body>
+</html>

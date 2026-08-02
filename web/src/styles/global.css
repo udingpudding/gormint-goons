@@ -1,0 +1,438 @@
+/*
+  Gormint Goons — visual system.
+
+  The register is the artifact the data comes from: Form 26, the sworn affidavit every
+  candidate files with the Election Commission. Ruled fields, captioned boxes, figures set
+  in a typewriter face, and the flat grey-warm stock of government form paper. Not a
+  newspaper and not a trading terminal — a document of record.
+
+  The one structural idea: no percentage is ever shown alone. Every rate is set as a
+  fraction unit — the rate, a rule, and the counts it was made from. The editorial rule of
+  the project ("always state the denominator") is the typographic rule of the page.
+
+  Data colour is a single hue because there is a single measure. Party colours are
+  deliberately absent: they would import the heat of party identity into a page whose whole
+  claim is that it is only reporting what candidates declared about themselves.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces — government form stock: grey-warm, deliberately not cream. */
+  --paper: #e5e2d9;
+  --field: #efede6;
+  --field-sunk: #dbd8ce;
+
+  /* Ink */
+  --ink: #14161a;
+  --ink-soft: #55585e;
+  --ink-faint: #7d8087;
+
+  /* Rules. The hairline is the workhorse of the whole layout. */
+  --rule: #b3afa2;
+  --rule-strong: #6e6b60;
+
+  /* Data. One measure, one hue. Validated against --paper. */
+  --data: #14795a;
+  --data-sunk: #cfd8d2;
+
+  /* The stamp. Used once, on the masthead — never on a data mark, because red on a
+     figure would read as a verdict and this page does not deliver one. */
+  --seal: #9b2a1e;
+
+  --display: 'Newsreader Variable', ui-serif, Georgia, serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --s-1: 0.75rem;
+  --s0: 0.9375rem;
+  --s1: 1.0625rem;
+  --s2: 1.375rem;
+  --s3: 1.875rem;
+  --figure: clamp(2.25rem, 7vw, 3.5rem);
+  --title: clamp(2rem, 7vw, 3.75rem);
+
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --measure: 68ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #16181b;
+    --field: #1e2126;
+    --field-sunk: #101215;
+    --ink: #e8e5dc;
+    --ink-soft: #9a9da3;
+    --ink-faint: #71747a;
+    --rule: #3a3d43;
+    --rule-strong: #6b6e75;
+    --data: #35a876;
+    --data-sunk: #262b2a;
+    --seal: #e0685a;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #16181b;
+  --field: #1e2126;
+  --field-sunk: #101215;
+  --ink: #e8e5dc;
+  --ink-soft: #9a9da3;
+  --ink-faint: #71747a;
+  --rule: #3a3d43;
+  --rule-strong: #6b6e75;
+  --data: #35a876;
+  --data-sunk: #262b2a;
+  --seal: #e0685a;
+}
+
+:root[data-theme='light'] {
+  --paper: #e5e2d9;
+  --field: #efede6;
+  --field-sunk: #dbd8ce;
+  --ink: #14161a;
+  --ink-soft: #55585e;
+  --ink-faint: #7d8087;
+  --rule: #b3afa2;
+  --rule-strong: #6e6b60;
+  --data: #14795a;
+  --data-sunk: #cfd8d2;
+  --seal: #9b2a1e;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: var(--s0);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  line-height: 1.08;
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.22em;
+}
+
+a:hover {
+  text-decoration-color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--seal);
+  outline-offset: 3px;
+}
+
+/* Field caption — the small tracked label that titles a box on a form. */
+.caption {
+  font-size: var(--s-1);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.shell {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 6rem;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  padding: clamp(2rem, 6vw, 4rem) 0 0;
+}
+
+.masthead__stamp {
+  display: inline-block;
+  border: 1.5px solid var(--seal);
+  color: var(--seal);
+  padding: 0.3rem 0.6rem;
+  font-size: var(--s-1);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.masthead__title {
+  font-size: var(--title);
+  margin: 1.5rem 0 0;
+}
+
+.masthead__standfirst {
+  max-width: var(--measure);
+  margin: 1.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: var(--s1);
+}
+
+.masthead__rule {
+  border: 0;
+  border-top: 1px solid var(--rule-strong);
+  margin: 2.5rem 0 0;
+}
+
+/* ---------- the record: five fraction cells ---------- */
+
+.record {
+  padding-top: clamp(2.5rem, 6vw, 4rem);
+}
+
+.record__lede {
+  font-family: var(--display);
+  font-size: var(--s3);
+  line-height: 1.22;
+  max-width: 30ch;
+  margin: 0.75rem 0 2.5rem;
+}
+
+.cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 2px; /* the surface gap that keeps adjacent fills legible */
+  border: 1px solid var(--rule-strong);
+  background: var(--rule);
+}
+
+.cell {
+  background: var(--field);
+  padding: 1rem 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cell--latest {
+  background: var(--field-sunk);
+}
+
+.cell__year {
+  font-size: var(--s-1);
+  letter-spacing: 0.14em;
+  color: var(--ink-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.cell--latest .cell__year {
+  color: var(--ink);
+}
+
+.cell__mark {
+  font-size: var(--s-1);
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+/* The signature: figure over rule over counts. */
+.frac {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.frac__value {
+  font-family: var(--display);
+  font-size: var(--figure);
+  line-height: 0.92;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.frac__value sup {
+  font-size: 0.42em;
+  vertical-align: super;
+  color: var(--ink-soft);
+  margin-left: 0.1em;
+}
+
+.frac__rule {
+  height: 0;
+  border-top: 1px solid var(--rule-strong);
+  transform-origin: left center;
+}
+
+.cell--latest .frac__rule {
+  border-top-width: 2.5px;
+}
+
+.frac__of {
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.frac__of b {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.record__note {
+  max-width: var(--measure);
+  margin: 1.5rem 0 0;
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+}
+
+/* ---------- party ledger ---------- */
+
+.ledger {
+  padding-top: clamp(3rem, 8vw, 5rem);
+}
+
+.ledger__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: 0.75rem;
+}
+
+.ledger__title {
+  font-size: var(--s2);
+}
+
+.scroller {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  min-width: 34rem;
+}
+
+thead th {
+  font-size: var(--s-1);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 400;
+  text-align: right;
+  padding: 0.9rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+thead th:first-child,
+tbody td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+tbody td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+  white-space: nowrap;
+}
+
+tbody tr:hover td {
+  background: var(--field);
+}
+
+.party {
+  font-size: var(--s1);
+}
+
+/* A single class outranks the `tbody td` element pair, so no !important is needed. */
+.meter {
+  width: clamp(5rem, 18vw, 11rem);
+  padding-right: 0;
+}
+
+.meter__track {
+  height: 7px;
+  background: var(--data-sunk);
+  position: relative;
+}
+
+.meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--data);
+  border-radius: 0 4px 4px 0; /* rounded data-end, anchored at the baseline */
+}
+
+.of {
+  color: var(--ink-soft);
+  font-size: var(--s-1);
+}
+
+.ledger__note {
+  max-width: var(--measure);
+  margin: 1.5rem 0 0;
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+}
+
+/* ---------- colophon ---------- */
+
+.colophon {
+  padding-top: clamp(3rem, 8vw, 5rem);
+}
+
+.colophon__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 2rem 3rem;
+  border-top: 1px solid var(--rule-strong);
+  padding-top: 1.5rem;
+}
+
+.colophon h3 {
+  font-family: var(--mono);
+  font-size: var(--s-1);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.75rem;
+}
+
+.colophon p {
+  margin: 0 0 0.75rem;
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+  max-width: 42ch;
+}
+
+.colophon strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ---------- motion ---------- */
+
+@keyframes rule-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .frac__rule {
+    animation: rule-in 620ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+  }
+}

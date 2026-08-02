@@ -35,3 +35,26 @@ jobs:
       # never sends CI traffic at those hosts on every push.
       - name: Test
         run: uv run pytest -q -m "not network"
+
+  site:
+    name: Site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: web
+
+      # The page reads data/public/site/headline.json from the repository root at build
+      # time, so a build failure here also catches the published data going missing or
+      # changing shape — not just a broken template.
+      - name: Build
+        run: npm run build
+        working-directory: web
