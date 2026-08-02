@@ -24,25 +24,39 @@ years or more, and non-bailable — is the more meaningful measure.
 
 Assets and liabilities are self-declared at the time of filing. They are not audited.
 
+## Where the candidate population comes from
+
+Figures are computed from the **per-constituency candidate lists**, which enumerate everyone
+who stood in each seat. Two other routes were available and are not used as the population:
+
+- The paginated summary listings cover only candidates whose affidavits ADR analysed, which
+  is a filtered subset.
+- They also omit the state, and constituency names are not unique.
+
+The summary listings are still collected, but only as a **check**: winners counted from the
+constituency pages must agree with winners enumerated by the `winner_analyzed` listing. The
+two are parsed by different code from different pages, so agreement is real evidence rather
+than a restatement.
+
 ## Denominators
 
-Rates are published against **candidates analysed**, not candidates who stood.
-
-ADR can only analyse an affidavit it can obtain and read. Some are missing, illegible, or
-filed too late. In the 2004 Lok Sabha, for instance, 457 of the 543 winners were analysed.
-Every rate on this site is therefore a share of the analysed population, and the count is
-printed beside the percentage so the gap is visible rather than implied.
-
-Two denominators are always published side by side:
+Two cohorts are published side by side:
 
 | Cohort | Denominator |
 |---|---|
-| `contested` | Candidates a party fielded and ADR analysed |
+| `contested` | Every candidate the party fielded in that election |
 | `won` | The subset who were elected |
+
+**A winner is counted in both.** They are still someone the party put up. Defining
+`contested` as "everyone who lost" would answer a question nobody asked.
 
 These routinely differ and neither is the "real" number. A party can field many candidates
 with declared cases while electing few, or the reverse — and that gap is one of the more
 informative things in the dataset.
+
+Note that a candidate's affidavit is not always legible or available to ADR, so some rows
+carry no asset figure. Those are recorded as missing rather than zero, and are excluded from
+median calculations rather than dragging them down.
 
 ### Small parties
 
@@ -90,16 +104,35 @@ version is archived alongside the old rather than replacing it. Published tables
 recent revision. The manifest retains every revision, which makes an upstream correction
 visible as a change in the record rather than a silent restatement.
 
+## By-elections are excluded
+
+MyNeta files by-elections under the general election that preceded them — a 2018 by-election
+appears inside the 2014 section. Left in, they push the count of members elected past the 543
+seats a reader expects and blend two different events into one figure.
+
+They are archived and kept in the normalized data with an `is_bye_election` flag, and
+excluded from every published general-election statistic. After exclusion the seat count is
+exactly 543 for 2009, 2014, 2019 and 2024.
+
+A related trap: in the 2009 listings, by-elections **reuse constituency ids** already used by
+general-election seats. Id 1 covers Adilabad in Andhra Pradesh, Hisar in Haryana and Tehri
+Garhwal in Uttarakhand. Attributing a seat by id alone would have filed candidates under the
+wrong state, so each page's state and constituency are read from the page's own title rather
+than from the index that links to it.
+
 ## Known limitations
 
-- **Candidates analysed is not candidates fielded.** Stated above; it is the single most
-  important caveat on this site.
-- **No state column, so no geography.** The listing pages give a constituency name but not
-  the state it sits in, and constituency names are not unique: Aurangabad is a seat in both
-  Bihar and Maharashtra, Maharajganj in both Bihar and Uttar Pradesh, Hamirpur in both
-  Himachal Pradesh and Uttar Pradesh. Grouping by constituency name alone would silently
-  merge them. State-level analysis therefore is not published, and will not be until the
-  constituency-to-state mapping is collected from the per-state listings.
+- **2004 is missing 28 winners.** Twenty-eight of the 542 constituency pages for 2004 carry
+  no winner marker at all upstream, so the 2004 elected cohort covers 514 seats rather than
+  543. Later elections are complete. The 2004 figure is therefore a share of 514, printed
+  alongside the percentage like every other denominator here.
+- **A state's figure is not a verdict on its government.** State breakdowns count members
+  returned to the Lok Sabha from that state, across all parties. They say nothing about who
+  governs the state, and should not be read that way.
+- **Constituency names repeat, so seats are identified by number.** Aurangabad is a seat in
+  both Bihar and Maharashtra, Maharajganj in both Bihar and Uttar Pradesh, Hamirpur in both
+  Himachal Pradesh and Uttar Pradesh. Grouping by name alone merges different members, so
+  every seat carries its numeric constituency id and its state.
 - **Party labels are as recorded per election.** Parties split, merge and rename. No attempt
   is made to trace a party's lineage across elections, so a renamed party appears as two
   distinct entries.

@@ -100,3 +100,27 @@ def page_url(election: Election, view: str, page: int = 1, sort: str = "candidat
 def document_key(election: Election, view: str, page: int) -> str:
     """Manifest key for one archived page, e.g. ``LokSabha2024/winner_analyzed/p003``."""
     return f"{election.slug}/{view}/p{page:03d}"
+
+
+def landing_url(election: Election) -> str:
+    """The election's front page, which carries the whole state-to-constituency map."""
+    return f"{BASE}/{election.slug}/"
+
+
+def landing_key(election: Election) -> str:
+    return f"{election.slug}/registry"
+
+
+def constituency_url(election: Election, constituency_id: int) -> str:
+    """Every candidate who stood in one seat.
+
+    Preferred over the paginated summary listings: it covers all candidates rather than a
+    filtered subset, names the winner, and carries each person's age and MyNeta id.
+    """
+    return (
+        f"{BASE}/{election.slug}/index.php?action=show_candidates&constituency_id={constituency_id}"
+    )
+
+
+def constituency_key(election: Election, constituency_id: int) -> str:
+    return f"{election.slug}/constituency/{constituency_id:05d}"

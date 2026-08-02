@@ -16,8 +16,10 @@ import argparse
 import logging
 import sys
 
+import polars as pl
+
 from pipeline import paths
-from pipeline.archive.crawl import crawl_elections
+from pipeline.archive.crawl import crawl_constituencies, crawl_elections
 from pipeline.archive.fetcher import Fetcher
 from pipeline.archive.manifest import Manifest
 from pipeline.archive.sources import myneta
@@ -48,8 +50,16 @@ def cmd_archive(args: argparse.Namespace) -> int:
 
     with Fetcher(manifest, min_interval=args.delay) as fetcher:
         try:
-            for summary in crawl_elections(fetcher, elections, views):
-                log.info("%s", summary)
+            if args.constituencies:
+                for election in elections:
+                    for summary in crawl_constituencies(fetcher, election):
+                        log.info("%s", summary)
+                    # Persist per election rather than only at the end: an interrupted
+                    # backfill of several thousand pages should not lose its progress.
+                    fetcher.save()
+            else:
+                for summary in crawl_elections(fetcher, elections, views):
+                    log.info("%s", summary)
         finally:
             # Persist whatever was archived even if the crawl is interrupted; a partial
             # backfill that remembers its progress is resumable, one that forgets is not.
@@ -61,8 +71,8 @@ def cmd_archive(args: argparse.Namespace) -> int:
 
 def cmd_parse(args: argparse.Namespace) -> int:
     paths.ensure_dirs()
-    written = normalize_stage.normalize_myneta()
-    log.info("Wrote %s candidate rows to %s", written, paths.NORMALIZED)
+    candidates, seats = normalize_stage.normalize_myneta()
+    log.info("Wrote %s candidate rows and %s seats to %s", candidates, seats, paths.NORMALIZED)
     return 0
 
 
@@ -71,6 +81,24 @@ def cmd_publish(args: argparse.Namespace) -> int:
     outputs = publish_stage.publish_all()
     for name, rows in outputs.items():
         log.info("Published %s (%s rows)", name, rows)
+
+    # Winners counted from constituency pages against winners enumerated by the summary
+    # listing — different pages, different parser. This is the project's only external
+    # check on the parsers now that MoSPI is unreachable, so it is always reported.
+    everything = pl.read_parquet(publish_stage.CANDIDATES_PARQUET)
+    for row in publish_stage.reconcile(everything).to_dicts():
+        seats, listing = row["winners_from_seats"], row["winners_from_listing"]
+        if seats is None or listing is None:
+            continue
+        verdict = "ok" if seats >= listing else "SEATS SHORT OF LISTING"
+        log.info(
+            "Reconcile %s: %s winners from seats, %s from listing (%+d) — %s",
+            row["election_year"],
+            seats,
+            listing,
+            row["difference"],
+            verdict,
+        )
     return 0
 
 
@@ -90,6 +118,12 @@ def main(argv: list[str] | None = None) -> int:
         "--winners-only",
         action="store_true",
         help="archive only the winners listing, which is ~30 pages per election rather than ~470",
+    )
+    archive.add_argument(
+        "--constituencies",
+        action="store_true",
+        help="archive every seat's candidate list (~545 pages per election). Slower than the "
+        "summary listings but covers all candidates and carries state, age and candidate ids",
     )
     archive.add_argument(
         "--delay",

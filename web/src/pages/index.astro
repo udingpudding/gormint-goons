@@ -18,9 +18,16 @@ import { resolve } from 'node:path';
 const dataPath = resolve(process.cwd(), '../data/public/site/headline.json');
 const data = JSON.parse(readFileSync(dataPath, 'utf-8'));
 
-const { timeline, parties, latestYear, minPartySize } = data;
+const { timeline, latestYear, minPartySize } = data;
+const parties = data.parties ?? [];
+const states = data.states ?? [];
 const latest = timeline[timeline.length - 1];
 const earliest = timeline[0];
+
+/** One decimal always, so 20% and 46.2% do not sit beside each other looking unlike. */
+function pct(value) {
+  return value == null ? '—' : `${value.toFixed(1)}%`;
+}
 
 /** Indian numbering: figures are read in lakh and crore, not millions. */
 function rupees(value) {
@@ -58,8 +65,8 @@ function rupees(value) {
       <section class="record">
         <p class="caption">Field 1 — Members elected with a declared criminal case</p>
         <h2 class="record__lede">
-          Among MPs whose affidavits were analysed, the share declaring a pending case has
-          risen at every general election since {earliest.year}.
+          The share of members elected to the Lok Sabha who declared a pending criminal case
+          has risen at every general election since {earliest.year}.
         </h2>
 
         <div class="cells">
@@ -77,7 +84,7 @@ function rupees(value) {
                   </p>
                   <div class="frac__rule" style={`animation-delay:${140 + i * 110}ms`} />
                   <p class="frac__of">
-                    <b>{row.withCases}</b> of {row.analysed} analysed
+                    <b>{row.withCases}</b> of {row.analysed} elected
                   </p>
                 </div>
               </article>
@@ -85,12 +92,25 @@ function rupees(value) {
           }
         </div>
 
+        {
+          latest.contestedPct != null && (
+            <p class="gap">
+              In {latest.year}, <b>{pct(latest.pct)}</b> of members elected had a declared
+              case, against <b>{pct(latest.contestedPct)}</b> of the{' '}
+              {latest.contested.toLocaleString('en-IN')} candidates who stood. Winning
+              correlates with having one.
+            </p>
+          )
+        }
+
         <p class="record__note">
-          Each figure is a share of the MPs whose affidavits the Association for Democratic
-          Reforms was able to analyse — not of all 543 seats. The counts under the rule are
-          the actual numbers, and they are printed because a percentage without them is not a
-          fact you can check. A declared case is one the member disclosed as pending against
-          them. It is not a conviction.
+          The counts under each rule are the actual numbers, printed because a percentage
+          without them is not a fact you can check. A declared case is one the member
+          disclosed as pending against them when they filed — it is not a conviction, and it
+          covers cases arising from protest alongside serious alleged offences. By-elections
+          are excluded. {earliest.year} rests on {earliest.analysed} seats rather than the
+          full 543, because {543 - earliest.analysed} of its constituency records name no
+          winner upstream.
         </p>
       </section>
 
@@ -124,13 +144,13 @@ function rupees(value) {
                         full bar and read as everyone. */}
                     <td
                       class="meter"
-                      title={`${row.party}: ${row.pct}% — ${row.withCases} of ${row.analysed} analysed`}
+                      title={`${row.party}: ${row.pct}% — ${row.withCases} of ${row.analysed} elected`}
                     >
                       <div class="meter__track" aria-hidden="true">
                         <div class="meter__fill" style={`width:${row.pct}%`} />
                       </div>
                     </td>
-                    <td>{row.pct}%</td>
+                    <td>{pct(row.pct)}</td>
                     <td>{rupees(row.medianAssets)}</td>
                   </tr>
                 ))
@@ -140,13 +160,66 @@ function rupees(value) {
         </div>
 
         <p class="ledger__note">
-          Parties that elected fewer than {minPartySize} analysed members are left out rather
+          Parties that elected fewer than {minPartySize} members are left out rather
           than shown as a percentage: three members out of five is "60%", which is true and
           tells you nothing next to a party that elected two hundred. Assets are self-declared
           and unaudited, summarised by median so a single very wealthy member does not move
           the figure.
         </p>
       </section>
+
+      {
+        states.length > 0 && (
+          <section class="ledger">
+            <div class="ledger__head">
+              <h2 class="ledger__title">By state</h2>
+              <p class="caption">{latestYear} · members elected · sorted by seats</p>
+            </div>
+
+            <div class="scroller">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">State</th>
+                    <th scope="col">With a declared case</th>
+                    <th scope="col" class="meter">
+                      <span class="visually-hidden">Share</span>
+                    </th>
+                    <th scope="col">Share</th>
+                    <th scope="col">Median assets</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {states.map((row) => (
+                    <tr>
+                      <td class="party">{row.state}</td>
+                      <td>
+                        <b>{row.withCases}</b> <span class="of">of {row.analysed}</span>
+                      </td>
+                      <td
+                        class="meter"
+                        title={`${row.state}: ${row.pct}% — ${row.withCases} of ${row.analysed}`}
+                      >
+                        <div class="meter__track" aria-hidden="true">
+                          <div class="meter__fill" style={`width:${row.pct}%`} />
+                        </div>
+                      </td>
+                      <td>{pct(row.pct)}</td>
+                      <td>{rupees(row.medianAssets)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p class="ledger__note">
+              States electing fewer than {minPartySize} members are left out. A state's figure
+              says nothing about who governs it — these are members returned to the Lok Sabha
+              from that state, across all parties.
+            </p>
+          </section>
+        )
+      }
 
       <footer class="colophon">
         <div class="colophon__grid">

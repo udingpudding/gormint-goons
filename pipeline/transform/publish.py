@@ -5,15 +5,14 @@ index, no weighting and no ranking of parties, because any such number would mos
 the weights chosen rather than anything about the parties — and defending the weights would
 become the argument, in place of the data.
 
-Two denominators are published side by side wherever a rate appears: the share among all
-candidates a party fielded, and the share among the ones who won. They routinely differ, and
-the gap is a finding rather than a rounding detail — a party can field few candidates with
-declared cases while electing many, or the reverse.
+Two cohorts are published side by side wherever a rate appears: every candidate a party
+fielded, and the subset who won. They routinely differ, and the gap is a finding rather than
+a rounding detail — a party can field many candidates with declared cases while electing few,
+or the reverse.
 
-The population is candidates whose affidavits ADR was able to analyse, which is not
-identical to everyone who stood. ``candidates_analysed`` is named for that reason: the column
-is the honest denominator, and the site should print it next to any percentage derived
-from it.
+The candidate population comes from the constituency pages, which list everyone who stood.
+The paginated summary listings cover only candidates whose affidavits ADR analysed, and are
+kept solely to check this stage's output against — see :func:`reconcile`.
 """
 
 from __future__ import annotations
@@ -29,12 +28,14 @@ from pipeline.transform.normalize import CANDIDATES_PARQUET
 log = logging.getLogger(__name__)
 
 #: The site reads these directly so the headline paints without loading a query engine.
-#: Small enough to inline; everything larger stays in Parquet for the explore view.
 SITE_DATA = paths.PUBLIC / "site"
 
-#: Minimum candidates before a rate is published. Percentages over three candidates are
+#: Minimum candidates before a rate is published. A percentage over three candidates is
 #: noise that reads as signal, and small parties would otherwise dominate any sort.
 MIN_CANDIDATES_FOR_RATE = 10
+
+#: Rows parsed from constituency pages — the canonical candidate population.
+CANONICAL_VIEW = "constituency"
 
 
 def publish_all() -> dict[str, int]:
@@ -44,184 +45,214 @@ def publish_all() -> dict[str, int]:
             f"{CANDIDATES_PARQUET} not found — run `python -m pipeline parse` first"
         )
 
-    candidates = pl.read_parquet(CANDIDATES_PARQUET)
+    everything = pl.read_parquet(CANDIDATES_PARQUET)
+
+    # By-elections are filed by MyNeta under the general election that preceded them. Left
+    # in, they push the count of members elected past the 543 seats a reader expects and
+    # blend two different events into one figure. They stay in the archive and in the
+    # normalized table; they are simply not part of a general-election statistic.
+    candidates = everything.filter((pl.col("view") == CANONICAL_VIEW) & ~pl.col("is_bye_election"))
+    if candidates.is_empty():
+        raise ValueError(
+            "No constituency-page rows found. Run "
+            "`python -m pipeline archive --constituencies` first — the summary listings "
+            "alone cannot support state breakdowns or a candidates-fielded denominator."
+        )
+
     paths.PUBLIC.mkdir(parents=True, exist_ok=True)
 
     totals = election_totals(candidates)
     parties = party_election_metrics(candidates)
+    states = state_election_metrics(candidates)
 
     outputs: dict[str, int] = {}
     for name, frame in (
-        ("candidates.parquet", _candidates_table(candidates)),
+        ("candidates.parquet", candidates.sort(["election_year", "state", "constituency", "name"])),
         ("party_election.parquet", parties),
+        ("state_election.parquet", states),
         ("election_totals.parquet", totals),
     ):
         frame.write_parquet(paths.PUBLIC / name)
         outputs[name] = frame.height
 
-    outputs |= _write_site_json(totals, parties)
+    outputs |= _write_site_json(totals, parties, states)
     return outputs
 
 
-def _write_site_json(totals: pl.DataFrame, parties: pl.DataFrame) -> dict[str, int]:
+# -- metrics ---------------------------------------------------------------------------
+
+
+def _cohorts(candidates: pl.DataFrame) -> pl.DataFrame:
+    """Label each row with the cohorts it belongs to.
+
+    A winner is also someone the party fielded, so winners appear in both cohorts. Treating
+    "contested" as everyone-who-did-not-win would answer a question nobody asked.
+    """
+    contested = candidates.with_columns(pl.lit("contested").alias("cohort"))
+    won = candidates.filter(pl.col("is_winner")).with_columns(pl.lit("won").alias("cohort"))
+    return pl.concat([contested, won], how="vertical")
+
+
+_AGGREGATIONS = (
+    pl.len().alias("candidates"),
+    (pl.col("criminal_cases") > 0).sum().alias("with_declared_cases"),
+    pl.col("criminal_cases").sum().alias("total_declared_cases"),
+    pl.col("assets_rupees").median().alias("median_assets_rupees"),
+    pl.col("liabilities_rupees").median().alias("median_liabilities_rupees"),
+    pl.col("age").median().alias("median_age"),
+)
+
+
+def _with_rate(frame: pl.DataFrame) -> pl.DataFrame:
+    return frame.with_columns(
+        # Withheld rather than rounded for tiny groups: a single candidate with a case
+        # would otherwise publish as "100% criminal", which is true and useless.
+        pl.when(pl.col("candidates") >= MIN_CANDIDATES_FOR_RATE)
+        .then((pl.col("with_declared_cases") / pl.col("candidates") * 100).round(1))
+        .otherwise(None)
+        .alias("pct_with_declared_cases")
+    )
+
+
+def party_election_metrics(candidates: pl.DataFrame) -> pl.DataFrame:
+    """Per party, per election, for each cohort."""
+    return _with_rate(
+        _cohorts(candidates)
+        .group_by(["election_year", "election_slug", "house", "cohort", "party"])
+        .agg(*_AGGREGATIONS)
+    ).sort(["election_year", "cohort", "party"])
+
+
+def state_election_metrics(candidates: pl.DataFrame) -> pl.DataFrame:
+    """Per state, per election, for each cohort.
+
+    Possible only because the constituency pages carry the state. Grouping the summary
+    listings by constituency name would have merged Aurangabad in Bihar with Aurangabad in
+    Maharashtra, and two other pairs like it.
+    """
+    return _with_rate(
+        _cohorts(candidates)
+        .group_by(["election_year", "election_slug", "house", "cohort", "state"])
+        .agg(*_AGGREGATIONS, pl.col("constituency_id").n_unique().alias("seats"))
+    ).sort(["election_year", "cohort", "state"])
+
+
+def election_totals(candidates: pl.DataFrame) -> pl.DataFrame:
+    """One row per election and cohort — the headline figures, party and state held aside."""
+    return _with_rate(
+        _cohorts(candidates)
+        .group_by(["election_year", "election_slug", "house", "cohort"])
+        .agg(
+            *_AGGREGATIONS,
+            pl.col("party").n_unique().alias("parties"),
+            pl.col("state").n_unique().alias("states"),
+            pl.col("constituency_id").n_unique().alias("seats"),
+        )
+    ).sort(["election_year", "cohort"])
+
+
+# -- reconciliation --------------------------------------------------------------------
+
+
+def reconcile(everything: pl.DataFrame) -> pl.DataFrame:
+    """Compare winners counted two independent ways.
+
+    The constituency pages mark a winner in each seat; the ``winner_analyzed`` summary
+    listing enumerates winners directly. The two are parsed by different code from different
+    pages, so agreement between them is real evidence the parsers are right — and this
+    project has no other external oracle now that MoSPI is unreachable.
+
+    The counts are not expected to match exactly: the summary listing covers only candidates
+    whose affidavits ADR analysed, while the constituency pages list everyone who stood. The
+    constituency count should be the same or slightly higher, never lower.
+    """
+    from_seats = (
+        everything.filter(
+            (pl.col("view") == CANONICAL_VIEW) & pl.col("is_winner") & ~pl.col("is_bye_election")
+        )
+        .group_by("election_year")
+        .agg(pl.len().alias("winners_from_seats"))
+    )
+    from_listing = (
+        everything.filter(pl.col("view") == "winner_analyzed")
+        .group_by("election_year")
+        .agg(pl.len().alias("winners_from_listing"))
+    )
+    return (
+        from_seats.join(from_listing, on="election_year", how="full", coalesce=True)
+        .with_columns(
+            (pl.col("winners_from_seats") - pl.col("winners_from_listing")).alias("difference")
+        )
+        .sort("election_year")
+    )
+
+
+# -- site payload ----------------------------------------------------------------------
+
+
+def _write_site_json(
+    totals: pl.DataFrame, parties: pl.DataFrame, states: pl.DataFrame
+) -> dict[str, int]:
     """Emit the small JSON the headline page reads.
 
     Kept separate from the Parquet because the two serve different jobs: the page needs a few
-    hundred bytes on first paint, while the explore view needs columnar data it can query.
+    kilobytes on first paint, while the explore view needs columnar data it can query.
     Loading a WASM query engine to render five numbers would be the wrong trade.
     """
     SITE_DATA.mkdir(parents=True, exist_ok=True)
 
     elected = totals.filter(pl.col("cohort") == "won").sort("election_year")
+    fielded = {
+        r["election_year"]: r for r in totals.filter(pl.col("cohort") == "contested").to_dicts()
+    }
+
     timeline = [
         {
             "year": row["election_year"],
             "pct": row["pct_with_declared_cases"],
             "withCases": row["with_declared_cases"],
-            "analysed": row["candidates_analysed"],
+            "analysed": row["candidates"],
             "medianAssets": int(row["median_assets_rupees"] or 0),
-            "totalCases": row["total_declared_cases"],
+            "contestedPct": fielded.get(row["election_year"], {}).get("pct_with_declared_cases"),
+            "contested": fielded.get(row["election_year"], {}).get("candidates"),
         }
         for row in elected.to_dicts()
     ]
-
     latest_year = max((row["year"] for row in timeline), default=None)
-    by_party = (
-        parties.filter(
-            (pl.col("cohort") == "won")
-            & (pl.col("election_year") == latest_year)
-            & (pl.col("pct_with_declared_cases").is_not_null())
-        )
-        .sort("candidates_analysed", descending=True)
-        .to_dicts()
-    )
-    party_rows = [
-        {
-            "party": row["party"],
-            "pct": row["pct_with_declared_cases"],
-            "withCases": row["with_declared_cases"],
-            "analysed": row["candidates_analysed"],
-            "medianAssets": int(row["median_assets_rupees"] or 0),
-        }
-        for row in by_party
-    ]
 
-    # Deliberately carries no build timestamp: it would change on every run and fill the
-    # git history with diffs that say nothing. The manifest already records when each
-    # source document was retrieved.
+    def rows_for(frame: pl.DataFrame, dimension: str, limit: int | None = None) -> list[dict]:
+        selected = (
+            frame.filter(
+                (pl.col("cohort") == "won")
+                & (pl.col("election_year") == latest_year)
+                & pl.col("pct_with_declared_cases").is_not_null()
+            )
+            .sort("candidates", descending=True)
+            .to_dicts()
+        )
+        if limit:
+            selected = selected[:limit]
+        return [
+            {
+                dimension: row[dimension],
+                "pct": row["pct_with_declared_cases"],
+                "withCases": row["with_declared_cases"],
+                "analysed": row["candidates"],
+                "medianAssets": int(row["median_assets_rupees"] or 0),
+            }
+            for row in selected
+        ]
+
+    # Deliberately carries no build timestamp: it would change on every run and fill the git
+    # history with diffs that say nothing. The manifest records when each page was retrieved.
     payload = {
         "latestYear": latest_year,
         "minPartySize": MIN_CANDIDATES_FOR_RATE,
         "timeline": timeline,
-        "parties": party_rows,
+        "parties": rows_for(parties, "party"),
+        "states": rows_for(states, "state"),
     }
     (SITE_DATA / "headline.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
-    return {"site/headline.json": len(timeline) + len(party_rows)}
-
-
-def _candidates_table(candidates: pl.DataFrame) -> pl.DataFrame:
-    """The candidate-level rows, for the explore view to query directly."""
-    return candidates.sort(["election_year", "party", "constituency", "name"])
-
-
-def party_election_metrics(candidates: pl.DataFrame) -> pl.DataFrame:
-    """Per party, per election, for each of the two cohorts.
-
-    ``cohort`` is ``contested`` for everyone a party fielded and ``won`` for the subset who
-    were elected, so both denominators sit in one table and neither can be quoted without
-    the other being one filter away.
-    """
-    frames = [
-        _cohort_metrics(candidates.filter(~pl.col("is_winner")), "contested"),
-        _cohort_metrics(candidates.filter(pl.col("is_winner")), "won"),
-    ]
-    combined = (
-        pl.concat([f for f in frames if f.height], how="vertical")
-        if any(f.height for f in frames)
-        else _empty_metrics()
-    )
-    return combined.sort(["election_year", "cohort", "party"])
-
-
-def _cohort_metrics(rows: pl.DataFrame, cohort: str) -> pl.DataFrame:
-    if rows.is_empty():
-        return _empty_metrics()
-
-    grouped = rows.group_by(["election_year", "election_slug", "house", "party"]).agg(
-        pl.len().alias("candidates_analysed"),
-        (pl.col("criminal_cases") > 0).sum().alias("with_declared_cases"),
-        pl.col("criminal_cases").sum().alias("total_declared_cases"),
-        pl.col("assets_rupees").median().alias("median_assets_rupees"),
-        pl.col("assets_rupees").sum().alias("total_assets_rupees"),
-        pl.col("liabilities_rupees").median().alias("median_liabilities_rupees"),
-    )
-
-    return grouped.with_columns(
-        pl.lit(cohort).alias("cohort"),
-        # Withheld rather than rounded for tiny parties: a single candidate with a case
-        # would otherwise publish as "100% criminal", which is true and useless.
-        pl.when(pl.col("candidates_analysed") >= MIN_CANDIDATES_FOR_RATE)
-        .then((pl.col("with_declared_cases") / pl.col("candidates_analysed") * 100).round(1))
-        .otherwise(None)
-        .alias("pct_with_declared_cases"),
-    ).select(
-        "election_year",
-        "election_slug",
-        "house",
-        "cohort",
-        "party",
-        "candidates_analysed",
-        "with_declared_cases",
-        "pct_with_declared_cases",
-        "total_declared_cases",
-        "median_assets_rupees",
-        "total_assets_rupees",
-        "median_liabilities_rupees",
-    )
-
-
-def _empty_metrics() -> pl.DataFrame:
-    return pl.DataFrame(
-        schema={
-            "election_year": pl.Int32,
-            "election_slug": pl.Utf8,
-            "house": pl.Utf8,
-            "cohort": pl.Utf8,
-            "party": pl.Utf8,
-            "candidates_analysed": pl.UInt32,
-            "with_declared_cases": pl.UInt32,
-            "pct_with_declared_cases": pl.Float64,
-            "total_declared_cases": pl.Int32,
-            "median_assets_rupees": pl.Float64,
-            "total_assets_rupees": pl.Int64,
-            "median_liabilities_rupees": pl.Float64,
-        }
-    )
-
-
-def election_totals(candidates: pl.DataFrame) -> pl.DataFrame:
-    """One row per election and cohort — the headline figures, party held aside."""
-    return (
-        candidates.with_columns(
-            pl.when(pl.col("is_winner"))
-            .then(pl.lit("won"))
-            .otherwise(pl.lit("contested"))
-            .alias("cohort")
-        )
-        .group_by(["election_year", "election_slug", "house", "cohort"])
-        .agg(
-            pl.len().alias("candidates_analysed"),
-            (pl.col("criminal_cases") > 0).sum().alias("with_declared_cases"),
-            pl.col("criminal_cases").sum().alias("total_declared_cases"),
-            pl.col("assets_rupees").median().alias("median_assets_rupees"),
-            pl.col("party").n_unique().alias("parties"),
-        )
-        .with_columns(
-            (pl.col("with_declared_cases") / pl.col("candidates_analysed") * 100)
-            .round(1)
-            .alias("pct_with_declared_cases")
-        )
-        .sort(["election_year", "cohort"])
-    )
+    return {"site/headline.json": len(timeline) + len(payload["parties"]) + len(payload["states"])}

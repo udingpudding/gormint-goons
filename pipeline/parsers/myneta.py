@@ -35,6 +35,15 @@ _NOT_A_NUMBER = {"", "-", "--", "nil", "n/a", "na", "not available", "nota", "no
 _MONEY = re.compile(r"(\d[\d,]*)")
 _RESERVATION = re.compile(r"\(\s*(SC|ST)\s*\)\s*$", re.IGNORECASE)
 
+#: "List of Candidates in AMALAPURAM (SC) : ANDHRA PRADESH Lok Sabha 2024".
+#: A by-election inserts a third segment:
+#: "... : BYE ELECTION ON 03-11-2018 : KARNATAKA Loksabha 2014".
+#: 2014 spells the house "Loksabha", hence the optional space.
+_PAGE_IDENTITY = re.compile(
+    r"List of Candidates in\s+(?P<body>.+?)\s+Lok\s?Sabha\s+\d{4}\s*$", re.IGNORECASE
+)
+_BYE_ELECTION = re.compile(r"BYE[\s-]*ELECTION", re.IGNORECASE)
+
 
 class Candidate(BaseModel):
     """One candidate's declaration, as published in a listing."""
@@ -43,7 +52,7 @@ class Candidate(BaseModel):
     election_year: int
     house: str
     view: str
-    """Listing this row came from, e.g. ``winner_analyzed``."""
+    """Listing this row came from, e.g. ``winner_analyzed`` or ``constituency``."""
 
     is_winner: bool
     serial: int | None
@@ -57,6 +66,34 @@ class Candidate(BaseModel):
     education: str | None
     assets_rupees: int | None
     liabilities_rupees: int | None
+
+    # Present only on rows parsed from a constituency page, which carries more than the
+    # summary listings do.
+    state: str | None = None
+    constituency_id: int | None = None
+    candidate_id: int | None = None
+    """MyNeta's own identifier for the person, from the affidavit link."""
+
+    age: int | None = None
+
+    is_bye_election: bool = False
+    """Whether this row is from a by-election rather than the general election.
+
+    MyNeta files by-elections under the general election that preceded them, so leaving them
+    in would push the count of members elected above the 543 seats a reader expects and mix
+    two different events into one figure."""
+
+
+class Seat(BaseModel):
+    """One constituency, and the state it belongs to."""
+
+    election_slug: str
+    election_year: int
+    state: str
+    state_id: int
+    constituency: str
+    constituency_id: int
+    reservation: str | None
 
 
 def parse_money(text: str) -> int | None:
@@ -152,6 +189,188 @@ def parse_listing(
     return out
 
 
+def parse_seat_registry(html: str | bytes, *, election_slug: str, election_year: int) -> list[Seat]:
+    """Extract the state-to-constituency map from an election's landing page.
+
+    The whole map is on that one page, held in a collapsed dropdown per state: a button
+    carrying the state name, followed by ``<div id="item_N">`` listing that state's seats
+    with their numeric ids. One request per election, rather than opening 543 seats to
+    discover which state each belongs to.
+
+    This matters more than it sounds. Constituency names are not unique — Aurangabad is a
+    seat in both Bihar and Maharashtra — so without the state, grouping by name silently
+    merges different members.
+    """
+    if isinstance(html, bytes):
+        html = html.decode("utf-8", errors="replace")
+
+    tree = HTMLParser(html)
+    seats: list[Seat] = []
+
+    for button in tree.css("button.dropbtnJS"):
+        onclick = button.attributes.get("onclick") or ""
+        match = re.search(r"handle_dropdown\(\s*'item'\s*,\s*'(\d+)'\s*\)", onclick)
+        if not match:
+            continue
+
+        item_id = match.group(1)
+        state = _normalise_space(button.text())
+        panel = tree.css_first(f"div#item_{item_id}")
+        if not state or panel is None:
+            continue
+
+        for link in panel.css("a"):
+            href = link.attributes.get("href") or ""
+            seat_match = re.search(r"constituency_id=(\d+)", href)
+            if not seat_match:
+                continue  # the "ALL CONSTITUENCIES" link carries a state_id instead
+
+            name, reservation = split_constituency(link.text())
+            if not name:
+                continue
+            seats.append(
+                Seat(
+                    election_slug=election_slug,
+                    election_year=election_year,
+                    state=state,
+                    state_id=int(item_id),
+                    constituency=name,
+                    constituency_id=int(seat_match.group(1)),
+                    reservation=reservation,
+                )
+            )
+    return seats
+
+
+class PageIdentity(BaseModel):
+    """What a constituency page says it is about, read from its own title."""
+
+    constituency: str
+    state: str
+    is_bye_election: bool
+
+
+def parse_page_identity(tree: HTMLParser | str | bytes) -> PageIdentity | None:
+    """Read the seat, state and election type off a constituency page's own title.
+
+    Preferred over the registry mapping because it cannot be wrong about which seat the page
+    describes — and the registry demonstrably can be, reusing ids for by-elections.
+
+    The title is colon-separated and the state is always the last segment. A by-election adds
+    a middle segment naming its date, which a two-part split would mistake for the state.
+    """
+    if not isinstance(tree, HTMLParser):
+        if isinstance(tree, bytes):
+            tree = tree.decode("utf-8", errors="replace")
+        tree = HTMLParser(tree)
+
+    node = tree.css_first("title")
+    if node is None:
+        return None
+    match = _PAGE_IDENTITY.search(_normalise_space(node.text()))
+    if not match:
+        return None
+
+    parts = [p.strip() for p in match.group("body").split(":") if p.strip()]
+    if len(parts) < 2:
+        return None
+    return PageIdentity(
+        constituency=parts[0],
+        state=parts[-1],
+        is_bye_election=bool(_BYE_ELECTION.search(match.group("body"))),
+    )
+
+
+def parse_constituency(
+    html: str | bytes,
+    *,
+    election_slug: str,
+    election_year: int,
+    house: str,
+    seat: Seat,
+) -> list[Candidate]:
+    """Extract every candidate who stood in one constituency.
+
+    Richer than the summary listings: this covers all candidates rather than a filtered
+    subset, marks the winner explicitly, and carries each person's MyNeta id and age. The
+    winner is flagged by a separate "Winner" element beside the name, not by a suffix on
+    it, so the name itself comes through clean.
+    """
+    if isinstance(html, bytes):
+        html = html.decode("utf-8", errors="replace")
+
+    tree = HTMLParser(html)
+
+    # The page names its own seat and state in the title, and that is trusted over the
+    # registry entry. In 2009 the registry reuses constituency ids for by-elections — id 1
+    # covers Adilabad in Andhra Pradesh, Hisar in Haryana and Tehri Garhwal in Uttarakhand —
+    # so a lookup keyed on the id alone silently files candidates under the wrong state.
+    identity = parse_page_identity(tree)
+    constituency, reservation = seat.constituency, seat.reservation
+    state, is_bye_election = seat.state, False
+    if identity is not None:
+        constituency, reservation = split_constituency(identity.constituency)
+        state, is_bye_election = identity.state, identity.is_bye_election
+
+    table = _find_candidate_table(tree)
+    if table is None:
+        return []
+
+    rows = table.css("tr")
+    header = [_normalise_space(c.text()) for c in rows[0].css("th,td")]
+    index = _column_index(header, require_constituency=False)
+
+    out: list[Candidate] = []
+    for row in rows[1:]:
+        cells = row.css("td")
+        if len(cells) < 4:
+            continue
+
+        name_cell = cells[index["candidate"]]
+        link = name_cell.css_first("a")
+        name = _normalise_space(link.text() if link is not None else name_cell.text())
+        if not name:
+            continue
+
+        candidate_id = None
+        if link is not None:
+            id_match = re.search(r"candidate_id=(\d+)", link.attributes.get("href") or "")
+            if id_match:
+                candidate_id = int(id_match.group(1))
+
+        text = [c.text() for c in cells]
+        out.append(
+            Candidate(
+                election_slug=election_slug,
+                election_year=election_year,
+                house=house,
+                view="constituency",
+                is_winner="winner" in name_cell.text().lower(),
+                serial=parse_count(text[index["sno"]]) if "sno" in index else None,
+                name=name,
+                constituency=constituency,
+                reservation=reservation,
+                party=_normalise_space(text[index["party"]]),
+                criminal_cases=parse_count(text[index["criminal"]]),
+                education=(
+                    _normalise_space(text[index["education"]]) or None
+                    if "education" in index
+                    else None
+                ),
+                assets_rupees=parse_money(text[index["assets"]]) if "assets" in index else None,
+                liabilities_rupees=(
+                    parse_money(text[index["liabilities"]]) if "liabilities" in index else None
+                ),
+                state=state,
+                constituency_id=seat.constituency_id,
+                candidate_id=candidate_id,
+                age=parse_count(text[index["age"]]) if "age" in index else None,
+                is_bye_election=is_bye_election,
+            )
+        )
+    return out
+
+
 # -- internals ----------------------------------------------------------------------
 
 
@@ -174,11 +393,13 @@ def _find_candidate_table(tree: HTMLParser):
     return best
 
 
-def _column_index(header: list[str]) -> dict[str, int]:
+def _column_index(header: list[str], *, require_constituency: bool = True) -> dict[str, int]:
     """Map logical fields to column positions by header text.
 
     Positional assumptions would be the obvious shortcut and the obvious way to silently
-    mis-attribute assets to liabilities if a column is ever inserted.
+    mis-attribute assets to liabilities if a column is ever inserted. Constituency pages
+    legitimately omit the constituency column — the page is already about one seat — and
+    add an age column the summary listings do not have.
     """
     lookup: dict[str, int] = {}
     for position, label in enumerate(header):
@@ -195,12 +416,16 @@ def _column_index(header: list[str]) -> dict[str, int]:
             lookup["criminal"] = position
         elif "education" in text:
             lookup["education"] = position
+        elif text == "age":
+            lookup["age"] = position
         elif "asset" in text:
             lookup["assets"] = position
         elif "liabilit" in text:
             lookup["liabilities"] = position
 
-    required = {"candidate", "constituency", "party", "criminal"}
+    required = {"candidate", "party", "criminal"}
+    if require_constituency:
+        required.add("constituency")
     missing = required - lookup.keys()
     if missing:
         raise ValueError(f"Listing table is missing expected columns: {sorted(missing)}")

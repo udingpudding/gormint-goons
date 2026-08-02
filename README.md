@@ -37,7 +37,7 @@ footer.
 
 | Pillar | Source | Status |
 |---|---|---|
-| Candidates & criminal cases | [MyNeta](https://myneta.info) — Association for Democratic Reforms (ADR) & National Election Watch | **Collected** — Lok Sabha winners, 2004–2024 |
+| Candidates & criminal cases | [MyNeta](https://myneta.info) — Association for Democratic Reforms (ADR) & National Election Watch | **Collected** — every Lok Sabha candidate, 2004–2024, by state and seat |
 | Infrastructure delivery | [Flash Report on Central Sector Projects](https://mospi.gov.in) — Ministry of Statistics & Programme Implementation (MoSPI) | **Blocked** — see below |
 | Parliamentary participation | [MP Track](https://prsindia.org/mptrack) — PRS Legislative Research | Planned — 15th–18th Lok Sabha (2009–) |
 
@@ -75,14 +75,19 @@ Fetching and parsing are deliberately separate. A parser fix becomes a cheap loc
 rather than re-downloading hundreds of files from government hosts, and every published
 number stays traceable to a stored original.
 
-The site is static. The browser queries the Parquet files directly using DuckDB-WASM, so
-there is no backend and no database.
+The site is static, with no backend and no database. The headline page reads a small
+pre-computed JSON so it paints immediately; the candidate-level Parquet is published for
+querying and will back an explore view.
 
 ### Self-checking
 
-Each MoSPI Flash Report states its own totals — project count, aggregate original cost,
-aggregate revised cost. The parser's output must sum to the report's own figures or CI
-fails. That gives an independent correctness check on every archived report.
+Winners are counted two independent ways and compared on every publish: marked on each
+constituency page, and enumerated by the separate `winner_analyzed` listing. Different pages,
+different parser — so agreement is evidence rather than a restatement.
+
+The result also lands where it should against the source organisation's own published
+analysis. ADR reports 251 MPs with declared criminal cases in 2024 and 162 in 2009; this
+pipeline independently produces 251 and 162.
 
 ---
 
@@ -106,7 +111,7 @@ docs/          methodology
 
 ```sh
 uv sync                                   # pipeline dependencies
-uv run python -m pipeline archive --winners-only   # fetch listings
+uv run python -m pipeline archive --constituencies  # fetch every seat (~2,800 pages)
 uv run python -m pipeline parse           # archived pages -> normalized rows
 uv run python -m pipeline publish         # normalized rows -> data/public/
 uv run pytest                             # tests

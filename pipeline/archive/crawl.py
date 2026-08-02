@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pipeline.archive.fetcher import Fetcher, Outcome
 from pipeline.archive.sources import myneta
 from pipeline.archive.store import read_blob
-from pipeline.parsers.myneta import parse_listing
+from pipeline.parsers.myneta import Seat, parse_constituency, parse_listing, parse_seat_registry
 
 log = logging.getLogger(__name__)
 
@@ -120,3 +120,66 @@ def crawl_elections(
     for election in elections:
         for view in views:
             yield crawl_listing(fetcher, election, view)
+
+
+def crawl_registry(fetcher: Fetcher, election: myneta.Election) -> list[Seat]:
+    """Archive an election's landing page and read the state-to-constituency map from it."""
+    result = fetcher.fetch(
+        myneta.SOURCE, myneta.landing_key(election), myneta.landing_url(election)
+    )
+    html = _page_bytes(fetcher, result)
+    if html is None:
+        log.warning("Could not read the landing page for %s", election.slug)
+        return []
+    return parse_seat_registry(html, election_slug=election.slug, election_year=election.year)
+
+
+def crawl_constituencies(fetcher: Fetcher, election: myneta.Election) -> Iterator[CrawlSummary]:
+    """Archive every seat's candidate list for one election.
+
+    Yields a running summary every 50 seats. A backfill of this shape takes an hour or so
+    across five elections, and a progress line that only arrives at the end is no use for
+    telling a slow crawl apart from a stalled one.
+    """
+    seats = crawl_registry(fetcher, election)
+    summary = CrawlSummary(election=election.slug, view="constituency")
+    if not seats:
+        summary.failed += 1
+        yield summary
+        return
+
+    for position, seat in enumerate(seats, start=1):
+        result = fetcher.fetch(
+            myneta.SOURCE,
+            myneta.constituency_key(election, seat.constituency_id),
+            myneta.constituency_url(election, seat.constituency_id),
+        )
+        if not result.ok:
+            summary.failed += 1
+            continue
+
+        html = _page_bytes(fetcher, result)
+        if html is None:
+            summary.failed += 1
+            continue
+
+        rows = parse_constituency(
+            html,
+            election_slug=election.slug,
+            election_year=election.year,
+            house=election.house,
+            seat=seat,
+        )
+        summary.pages += 1
+        summary.rows_seen += len(rows)
+        if result.outcome is Outcome.ARCHIVED:
+            summary.archived += 1
+        elif result.outcome is Outcome.REVISED:
+            summary.revised += 1
+        else:
+            summary.skipped += 1
+
+        if position % 50 == 0:
+            log.info("%s — %s/%s seats", election.slug, position, len(seats))
+
+    yield summary

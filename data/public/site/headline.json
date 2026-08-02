@@ -4,87 +4,227 @@
   "timeline": [
     {
       "year": 2004,
-      "pct": 23.9,
-      "withCases": 109,
-      "analysed": 457,
-      "medianAssets": 5517697,
-      "totalCases": 385
+      "pct": 24.3,
+      "withCases": 125,
+      "analysed": 514,
+      "medianAssets": 5561000,
+      "contestedPct": 12.7,
+      "contested": 4268
     },
     {
       "year": 2009,
-      "pct": 29.5,
-      "withCases": 142,
-      "analysed": 482,
-      "medianAssets": 14151539,
-      "totalCases": 451
+      "pct": 29.9,
+      "withCases": 162,
+      "analysed": 542,
+      "medianAssets": 14047833,
+      "contestedPct": 14.4,
+      "contested": 6992
     },
     {
       "year": 2014,
-      "pct": 34.5,
-      "withCases": 166,
-      "analysed": 481,
+      "pct": 34.4,
+      "withCases": 186,
+      "analysed": 541,
       "medianAssets": 33959072,
-      "totalCases": 577
+      "contestedPct": 17.3,
+      "contested": 7576
     },
     {
       "year": 2019,
-      "pct": 43.8,
-      "withCases": 211,
-      "analysed": 482,
-      "medianAssets": 49181115,
-      "totalCases": 951
+      "pct": 43.5,
+      "withCases": 236,
+      "analysed": 542,
+      "medianAssets": 55096252,
+      "contestedPct": 18.9,
+      "contested": 7332
     },
     {
       "year": 2024,
-      "pct": 45.5,
-      "withCases": 220,
-      "analysed": 483,
+      "pct": 46.2,
+      "withCases": 251,
+      "analysed": 543,
       "medianAssets": 71664809,
-      "totalCases": 1188
+      "contestedPct": 20.0,
+      "contested": 7680
     }
   ],
   "parties": [
     {
       "party": "BJP",
-      "pct": 37.1,
-      "withCases": 78,
-      "analysed": 210,
-      "medianAssets": 69669686
+      "pct": 39.2,
+      "withCases": 94,
+      "analysed": 240,
+      "medianAssets": 67389160
     },
     {
       "party": "INC",
-      "pct": 48.4,
-      "withCases": 44,
-      "analysed": 91,
-      "medianAssets": 85341885
+      "pct": 49.5,
+      "withCases": 49,
+      "analysed": 99,
+      "medianAssets": 83915436
     },
     {
       "party": "SP",
-      "pct": 61.8,
+      "pct": 56.8,
       "withCases": 21,
-      "analysed": 34,
-      "medianAssets": 73621072
+      "analysed": 37,
+      "medianAssets": 73603801
     },
     {
       "party": "AITC",
-      "pct": 46.2,
-      "withCases": 12,
-      "analysed": 26,
-      "medianAssets": 54607374
+      "pct": 44.8,
+      "withCases": 13,
+      "analysed": 29,
+      "medianAssets": 52732933
     },
     {
       "party": "DMK",
-      "pct": 61.9,
+      "pct": 59.1,
       "withCases": 13,
-      "analysed": 21,
-      "medianAssets": 148658298
+      "analysed": 22,
+      "medianAssets": 352678932
     },
     {
       "party": "TDP",
-      "pct": 46.2,
-      "withCases": 6,
-      "analysed": 13,
+      "pct": 50.0,
+      "withCases": 8,
+      "analysed": 16,
       "medianAssets": 233073561
+    },
+    {
+      "party": "JD(U)",
+      "pct": 16.7,
+      "withCases": 2,
+      "analysed": 12,
+      "medianAssets": 44130032
+    }
+  ],
+  "states": [
+    {
+      "state": "UTTAR PRADESH",
+      "pct": 50.0,
+      "withCases": 40,
+      "analysed": 80,
+      "medianAssets": 74885065
+    },
+    {
+      "state": "MAHARASHTRA",
+      "pct": 50.0,
+      "withCases": 24,
+      "analysed": 48,
+      "medianAssets": 147488792
+    },
+    {
+      "state": "WEST BENGAL",
+      "pct": 52.4,
+      "withCases": 22,
+      "analysed": 42,
+      "medianAssets": 38476131
+    },
+    {
+      "state": "BIHAR",
+      "pct": 52.5,
+      "withCases": 21,
+      "analysed": 40,
+      "medianAssets": 89132471
+    },
+    {
+      "state": "TAMIL NADU",
+      "pct": 66.7,
+      "withCases": 26,
+      "analysed": 39,
+      "medianAssets": 111916195
+    },
+    {
+      "state": "MADHYA PRADESH",
+      "pct": 31.0,
+      "withCases": 9,
+      "analysed": 29,
+      "medianAssets": 56062856
+    },
+    {
+      "state": "KARNATAKA",
+      "pct": 46.4,
+      "withCases": 13,
+      "analysed": 28,
+      "medianAssets": 264530557
+    },
+    {
+      "state": "GUJARAT",
+      "pct": 19.2,
+      "withCases": 5,
+      "analysed": 26,
+      "medianAssets": 47003506
+    },
+    {
+      "state": "ANDHRA PRADESH",
+      "pct": 52.0,
+      "withCases": 13,
+      "analysed": 25,
+      "medianAssets": 262569903
+    },
+    {
+      "state": "RAJASTHAN",
+      "pct": 16.0,
+      "withCases": 4,
+      "analysed": 25,
+      "medianAssets": 53322989
+    },
+    {
+      "state": "ODISHA",
+      "pct": 76.2,
+      "withCases": 16,
+      "analysed": 21,
+      "medianAssets": 46254213
+    },
+    {
+      "state": "KERALA",
+      "pct": 95.0,
+      "withCases": 19,
+      "analysed": 20,
+      "medianAssets": 24936775
+    },
+    {
+      "state": "TELANGANA",
+      "pct": 82.4,
+      "withCases": 14,
+      "analysed": 17,
+      "medianAssets": 239871103
+    },
+    {
+      "state": "ASSAM",
+      "pct": 21.4,
+      "withCases": 3,
+      "analysed": 14,
+      "medianAssets": 36633328
+    },
+    {
+      "state": "JHARKHAND",
+      "pct": 71.4,
+      "withCases": 10,
+      "analysed": 14,
+      "medianAssets": 49849182
+    },
+    {
+      "state": "PUNJAB",
+      "pct": 15.4,
+      "withCases": 2,
+      "analysed": 13,
+      "medianAssets": 85341885
+    },
+    {
+      "state": "CHHATTISGARH",
+      "pct": 9.1,
+      "withCases": 1,
+      "analysed": 11,
+      "medianAssets": 26312546
+    },
+    {
+      "state": "HARYANA",
+      "pct": 10.0,
+      "withCases": 1,
+      "analysed": 10,
+      "medianAssets": 187566406
     }
   ]
 }
