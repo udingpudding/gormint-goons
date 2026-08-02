@@ -10,9 +10,10 @@
   fraction unit — the rate, a rule, and the counts it was made from. The editorial rule of
   the project ("always state the denominator") is the typographic rule of the page.
 
-  Data colour is a single hue because there is a single measure. Party colours are
-  deliberately absent: they would import the heat of party identity into a page whose whole
-  claim is that it is only reporting what candidates declared about themselves.
+  Charts use one or two neutral hues, both checked with the palette validator rather than
+  chosen by eye. Party colours appear in exactly one place — the honours list, where the
+  point is to hand a named party a certificate it did not ask for. Everywhere else a party
+  is a label, because a chart coloured by allegiance stops being read as a chart.
 */
 
 :root {
@@ -32,8 +33,11 @@
   --rule: #b3afa2;
   --rule-strong: #6e6b60;
 
-  /* Data. One measure, one hue. Validated against --paper. */
+  /* Data. Validated against --paper with the palette checker, not picked by eye.
+     --data carries the subject of each chart (members elected); --data-alt carries the
+     comparison population (everyone who stood). */
   --data: #14795a;
+  --data-alt: #9a5b12;
   --data-sunk: #cfd8d2;
 
   /* The stamp. Used once, on the masthead — never on a data mark, because red on a
@@ -66,6 +70,7 @@
     --rule: #3a3d43;
     --rule-strong: #6b6e75;
     --data: #35a876;
+    --data-alt: #bc8129;
     --data-sunk: #262b2a;
     --seal: #e0685a;
   }
@@ -81,6 +86,7 @@
   --rule: #3a3d43;
   --rule-strong: #6b6e75;
   --data: #35a876;
+  --data-alt: #bc8129;
   --data-sunk: #262b2a;
   --seal: #e0685a;
 }
@@ -95,6 +101,7 @@
   --rule: #b3afa2;
   --rule-strong: #6e6b60;
   --data: #14795a;
+  --data-alt: #9a5b12;
   --data-sunk: #cfd8d2;
   --seal: #9b2a1e;
 }
@@ -452,4 +459,211 @@ tbody tr:hover td {
   .frac__rule {
     animation: rule-in 620ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
   }
+}
+
+/* ---------- section furniture ---------- */
+
+.section {
+  padding-top: clamp(3rem, 8vw, 5.5rem);
+}
+
+.section__head {
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: 0.85rem;
+  margin-bottom: 2rem;
+}
+
+.section__title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  margin-top: 0.5rem;
+}
+
+.section__standfirst {
+  max-width: var(--measure);
+  margin: 1.25rem 0 0;
+  color: var(--ink-soft);
+}
+
+.split {
+  display: grid;
+  gap: clamp(2rem, 5vw, 3.5rem);
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  align-items: start;
+}
+
+/* ---------- distribution chart ---------- */
+
+.dist {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.dist__row {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, auto) 1fr;
+  gap: 0.35rem 0.9rem;
+  align-items: center;
+}
+
+.dist__label {
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dist__pair {
+  display: grid;
+  gap: 2px; /* surface gap so adjacent fills never touch */
+}
+
+.dist__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.dist__fill {
+  height: 9px;
+  border-radius: 0 4px 4px 0; /* rounded data-end, anchored to the baseline */
+  min-width: 1px;
+}
+
+.dist__fill--all {
+  background: var(--data-alt);
+}
+
+.dist__fill--won {
+  background: var(--data);
+}
+
+.dist__value {
+  font-size: var(--s-1);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.legend i {
+  width: 14px;
+  height: 9px;
+  border-radius: 0 3px 3px 0;
+  display: inline-block;
+}
+
+.legend i.all {
+  background: var(--data-alt);
+}
+
+.legend i.won {
+  background: var(--data);
+}
+
+/* ---------- the honours list ---------- */
+
+.honours {
+  padding-top: clamp(3rem, 8vw, 5.5rem);
+}
+
+.honours__grid {
+  display: grid;
+  gap: 2px;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  border: 1px solid var(--rule-strong);
+  background: var(--rule);
+}
+
+/* A certificate, not a card: the joke is that this looks like something a ministry would
+   actually issue, and the party colour is the ribbon on it. */
+.award {
+  background: var(--field);
+  padding: 1.35rem 1.35rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  border-top: 4px solid var(--award, var(--rule-strong));
+}
+
+.award__title {
+  font-size: var(--s2);
+  line-height: 1.15;
+}
+
+.award__party {
+  font-family: var(--mono);
+  font-size: var(--s1);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--award, var(--ink));
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.award__swatch {
+  width: 10px;
+  height: 10px;
+  background: var(--award, var(--ink-faint));
+  flex: none;
+}
+
+.award__figure {
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.award__of {
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+  border-top: 1px solid var(--rule);
+  padding-top: 0.55rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.award__citation {
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.award__runners {
+  font-size: var(--s-1);
+  color: var(--ink-faint);
+  margin: auto 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.disclaimer {
+  margin: 1.5rem 0 0;
+  padding: 0.9rem 1.1rem;
+  border: 1px dashed var(--rule-strong);
+  font-size: var(--s-1);
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.disclaimer b {
+  color: var(--ink);
+  font-weight: 600;
 }

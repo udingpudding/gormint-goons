@@ -256,5 +256,319 @@
       "medianAssets": 187566406,
       "medianAge": 64
     }
+  ],
+  "byMoney": [
+    {
+      "party": "DMK",
+      "pct": 59.1,
+      "withCases": 13,
+      "analysed": 22,
+      "medianAssets": 352678932,
+      "medianAge": 54
+    },
+    {
+      "party": "TDP",
+      "pct": 50.0,
+      "withCases": 8,
+      "analysed": 16,
+      "medianAssets": 233073561,
+      "medianAge": 49
+    },
+    {
+      "party": "INC",
+      "pct": 49.5,
+      "withCases": 49,
+      "analysed": 99,
+      "medianAssets": 83915436,
+      "medianAge": 54
+    },
+    {
+      "party": "SP",
+      "pct": 56.8,
+      "withCases": 21,
+      "analysed": 37,
+      "medianAssets": 73603801,
+      "medianAge": 54
+    },
+    {
+      "party": "BJP",
+      "pct": 39.2,
+      "withCases": 94,
+      "analysed": 240,
+      "medianAssets": 67389160,
+      "medianAge": 58
+    },
+    {
+      "party": "AITC",
+      "pct": 44.8,
+      "withCases": 13,
+      "analysed": 29,
+      "medianAssets": 52732933,
+      "medianAge": 61
+    },
+    {
+      "party": "JD(U)",
+      "pct": 16.7,
+      "withCases": 2,
+      "analysed": 12,
+      "medianAssets": 44130032,
+      "medianAge": 66
+    }
+  ],
+  "byAge": [
+    {
+      "party": "JD(U)",
+      "pct": 16.7,
+      "withCases": 2,
+      "analysed": 12,
+      "medianAssets": 44130032,
+      "medianAge": 66
+    },
+    {
+      "party": "AITC",
+      "pct": 44.8,
+      "withCases": 13,
+      "analysed": 29,
+      "medianAssets": 52732933,
+      "medianAge": 61
+    },
+    {
+      "party": "BJP",
+      "pct": 39.2,
+      "withCases": 94,
+      "analysed": 240,
+      "medianAssets": 67389160,
+      "medianAge": 58
+    },
+    {
+      "party": "INC",
+      "pct": 49.5,
+      "withCases": 49,
+      "analysed": 99,
+      "medianAssets": 83915436,
+      "medianAge": 54
+    },
+    {
+      "party": "SP",
+      "pct": 56.8,
+      "withCases": 21,
+      "analysed": 37,
+      "medianAssets": 73603801,
+      "medianAge": 54
+    },
+    {
+      "party": "DMK",
+      "pct": 59.1,
+      "withCases": 13,
+      "analysed": 22,
+      "medianAssets": 352678932,
+      "medianAge": 54
+    },
+    {
+      "party": "TDP",
+      "pct": 50.0,
+      "withCases": 8,
+      "analysed": 16,
+      "medianAssets": 233073561,
+      "medianAge": 49
+    }
+  ],
+  "assetBands": [
+    {
+      "label": "Under ₹1 lakh",
+      "contested": 543,
+      "won": 0,
+      "contestedShare": 9.5,
+      "wonShare": 0.0
+    },
+    {
+      "label": "₹1–10 lakh",
+      "contested": 1265,
+      "won": 1,
+      "contestedShare": 22.2,
+      "wonShare": 0.3
+    },
+    {
+      "label": "₹10 lakh–1 crore",
+      "contested": 2140,
+      "won": 29,
+      "contestedShare": 37.5,
+      "wonShare": 7.8
+    },
+    {
+      "label": "₹1–10 crore",
+      "contested": 1332,
+      "won": 191,
+      "contestedShare": 23.3,
+      "wonShare": 51.5
+    },
+    {
+      "label": "₹10–100 crore",
+      "contested": 391,
+      "won": 133,
+      "contestedShare": 6.8,
+      "wonShare": 35.8
+    },
+    {
+      "label": "Over ₹100 crore",
+      "contested": 39,
+      "won": 17,
+      "contestedShare": 0.7,
+      "wonShare": 4.6
+    }
+  ],
+  "ageBands": [
+    {
+      "label": "25–34",
+      "contested": 1131,
+      "won": 19,
+      "contestedShare": 14.7,
+      "wonShare": 3.5
+    },
+    {
+      "label": "35–44",
+      "contested": 2153,
+      "won": 71,
+      "contestedShare": 28.0,
+      "wonShare": 13.1
+    },
+    {
+      "label": "45–54",
+      "contested": 2144,
+      "won": 157,
+      "contestedShare": 27.9,
+      "wonShare": 28.9
+    },
+    {
+      "label": "55–64",
+      "contested": 1463,
+      "won": 170,
+      "contestedShare": 19.0,
+      "wonShare": 31.3
+    },
+    {
+      "label": "65–74",
+      "contested": 710,
+      "won": 113,
+      "contestedShare": 9.2,
+      "wonShare": 20.8
+    },
+    {
+      "label": "75+",
+      "contested": 79,
+      "won": 13,
+      "contestedShare": 1.0,
+      "wonShare": 2.4
+    }
+  ],
+  "honours": [
+    {
+      "id": "cases",
+      "title": "The Rap Sheet",
+      "citation": "For the largest share of members arriving with a pending criminal case.",
+      "unit": "percent",
+      "party": "DMK",
+      "value": 59.1,
+      "withCases": 13,
+      "analysed": 22,
+      "runnersUp": [
+        {
+          "party": "SP",
+          "value": 56.8,
+          "analysed": 37
+        },
+        {
+          "party": "TDP",
+          "value": 50.0,
+          "analysed": 16
+        },
+        {
+          "party": "INC",
+          "value": 49.5,
+          "analysed": 99
+        }
+      ]
+    },
+    {
+      "id": "money",
+      "title": "The Moneybags",
+      "citation": "For the highest median declared fortune among members elected.",
+      "unit": "rupees",
+      "party": "DMK",
+      "value": 352678932,
+      "withCases": 13,
+      "analysed": 22,
+      "runnersUp": [
+        {
+          "party": "TDP",
+          "value": 233073561,
+          "analysed": 16
+        },
+        {
+          "party": "INC",
+          "value": 83915436,
+          "analysed": 99
+        },
+        {
+          "party": "SP",
+          "value": 73603801,
+          "analysed": 37
+        }
+      ]
+    },
+    {
+      "id": "age",
+      "title": "The Long Service Medal",
+      "citation": "For the highest median age, in a chamber that keeps getting older.",
+      "unit": "years",
+      "party": "JD(U)",
+      "value": 66,
+      "withCases": 2,
+      "analysed": 12,
+      "runnersUp": [
+        {
+          "party": "AITC",
+          "value": 61,
+          "analysed": 29
+        },
+        {
+          "party": "BJP",
+          "value": 58,
+          "analysed": 240
+        },
+        {
+          "party": "DMK",
+          "value": 54,
+          "analysed": 22
+        }
+      ]
+    },
+    {
+      "id": "clean",
+      "title": "The Unblemished",
+      "citation": "For the smallest share of members with a pending case. Somebody has to win it.",
+      "unit": "percent",
+      "party": "JD(U)",
+      "value": 16.7,
+      "withCases": 2,
+      "analysed": 12,
+      "runnersUp": [
+        {
+          "party": "BJP",
+          "value": 39.2,
+          "analysed": 240
+        },
+        {
+          "party": "AITC",
+          "value": 44.8,
+          "analysed": 29
+        },
+        {
+          "party": "INC",
+          "value": 49.5,
+          "analysed": 99
+        }
+      ]
+    }
   ]
 }

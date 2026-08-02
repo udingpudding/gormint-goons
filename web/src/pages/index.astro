@@ -8,9 +8,12 @@ import '../styles/global.css';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import Distribution from '../components/Distribution.astro';
+import Honours from '../components/Honours.astro';
+import Ledger from '../components/Ledger.astro';
+
 // Read the published figures at build time. The site is static: no query engine, no
-// database, no request-time work. The heavier candidate-level Parquet stays out of this
-// page — loading a WASM engine to render five numbers would be the wrong trade.
+// database, no request-time work.
 //
 // Resolved from the working directory rather than import.meta.url: this frontmatter is
 // bundled into dist/.prerender/ before it runs, so a URL relative to the module would
@@ -21,36 +24,28 @@ const data = JSON.parse(readFileSync(dataPath, 'utf-8'));
 const { timeline, latestYear, minPartySize } = data;
 const parties = data.parties ?? [];
 const states = data.states ?? [];
+const byMoney = data.byMoney ?? [];
+const byAge = data.byAge ?? [];
+const assetBands = data.assetBands ?? [];
+const ageBands = data.ageBands ?? [];
+const honours = data.honours ?? [];
+
 const latest = timeline[timeline.length - 1];
 const earliest = timeline[0];
 
-/** One decimal always, so 20% and 46.2% do not sit beside each other looking unlike. */
-function pct(value) {
-  return value == null ? '—' : `${value.toFixed(1)}%`;
-}
-
-/** An undeclared age must read as absent, not as a number. */
-function years(value) {
-  return value == null ? '—' : `${value}`;
-}
-
-/** Indian numbering: figures are read in lakh and crore, not millions. */
-function rupees(value) {
-  if (!value) return '—';
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return `₹${value.toLocaleString('en-IN')}`;
-}
+const richest = assetBands[assetBands.length - 1];
+const poorest = assetBands[0];
+const youngest = ageBands[0];
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gormint Goons — declared criminal cases in the Lok Sabha, 2004–2024</title>
+    <title>Gormint Goons — what the Lok Sabha declared about itself, 2004–2024</title>
     <meta
       name="description"
-      content={`Members of the Lok Sabha who declared a pending criminal case against themselves rose from ${earliest.pct}% in ${earliest.year} to ${latest.pct}% in ${latest.year}. Compiled from candidate affidavits via ADR.`}
+      content={`Criminal cases, money and age in the Lok Sabha, taken from candidates' own sworn affidavits. Members declaring a pending case rose from ${earliest.pct}% in ${earliest.year} to ${latest.pct}% in ${latest.year}.`}
     />
   </head>
 
@@ -60,21 +55,30 @@ function rupees(value) {
         <p class="masthead__stamp">Record of declarations</p>
         <h1 class="masthead__title">Gormint&nbsp;Goons</h1>
         <p class="masthead__standfirst">
-          What candidates for the Lok Sabha swore about themselves — pending criminal cases,
-          assets, liabilities — taken from the affidavits they filed with the Election
-          Commission, {earliest.year} to {latest.year}.
+          Everything below was sworn to by the candidates themselves, on affidavits filed with
+          the Election Commission between {earliest.year} and {latest.year}. Nobody is accused
+          of anything here that they did not first declare in writing.
         </p>
         <hr class="masthead__rule" />
       </header>
 
-      <section class="record">
-        <p class="caption">Field 1 — Members elected with a declared criminal case</p>
-        <h2 class="record__lede">
-          The share of members elected to the Lok Sabha who declared a pending criminal case
-          has risen at every general election since {earliest.year}.
-        </h2>
+      <Honours honours={honours} year={latestYear} minPartySize={minPartySize} />
 
-        <div class="cells">
+      {/* ---------------- criminal cases ---------------- */}
+
+      <section class="section" id="cases">
+        <div class="section__head">
+          <p class="caption">Field 1 — Criminal cases</p>
+          <h2 class="section__title">The charge sheet</h2>
+        </div>
+
+        <p class="section__standfirst">
+          The share of members arriving at the Lok Sabha with a pending criminal case has
+          risen at every single general election since {earliest.year}. Nobody planned this.
+          It simply keeps happening.
+        </p>
+
+        <div class="cells" style="margin-top:2rem">
           {
             timeline.map((row, i) => (
               <article class={`cell${row.year === latestYear ? ' cell--latest' : ''}`}>
@@ -100,134 +104,147 @@ function rupees(value) {
         {
           latest.contestedPct != null && (
             <p class="gap">
-              In {latest.year}, <b>{pct(latest.pct)}</b> of members elected had a declared
-              case, against <b>{pct(latest.contestedPct)}</b> of the{' '}
-              {latest.contested.toLocaleString('en-IN')} candidates who stood. Winning
-              correlates with having one.
+              A pending case is not a handicap. In {latest.year} it was more than twice as
+              common among the winners ({latest.pct.toFixed(1)}%) as among the{' '}
+              {latest.contested.toLocaleString('en-IN')} people who merely ran ({latest.contestedPct.toFixed(1)}%).
             </p>
           )
         }
 
+        <section class="ledger">
+          <Ledger
+            rows={parties}
+            dimension="party"
+            metric="pct"
+            metricLabel="Share with a case"
+            format="percent"
+            percentTrack={true}
+            title="By party"
+            caption={`${latestYear} · members elected`}
+          />
+        </section>
+
+        <section class="ledger">
+          <Ledger
+            rows={states}
+            dimension="state"
+            metric="pct"
+            metricLabel="Share with a case"
+            format="percent"
+            percentTrack={true}
+            title="By state"
+            caption={`${latestYear} · members elected`}
+            note="A state's figure counts members it returned to the Lok Sabha across all parties. It says nothing about who governs the state."
+          />
+        </section>
+
         <p class="record__note">
-          The counts under each rule are the actual numbers, printed because a percentage
-          without them is not a fact you can check. A declared case is one the member
-          disclosed as pending against them when they filed — it is not a conviction, and it
-          covers cases arising from protest alongside serious alleged offences. By-elections
-          are excluded. {earliest.year} rests on {earliest.analysed} seats rather than the
-          full 543, because {543 - earliest.analysed} of its constituency records name no
-          winner upstream.
+          A declared case is one the member disclosed as pending against them when they filed.
+          It is not a conviction, and it covers cases arising from protest alongside serious
+          alleged offences. By-elections are excluded. {earliest.year} rests on{' '}
+          {earliest.analysed} seats rather than the full 543, because {543 - earliest.analysed}
+          {' '}of its constituency records name no winner upstream.
         </p>
       </section>
 
-      <section class="ledger">
-        <div class="ledger__head">
-          <h2 class="ledger__title">By party</h2>
-          <p class="caption">{latestYear} · members elected · sorted by size</p>
+      {/* ---------------- money ---------------- */}
+
+      <section class="section" id="money">
+        <div class="section__head">
+          <p class="caption">Field 2 — Declared assets</p>
+          <h2 class="section__title">The price of a seat</h2>
         </div>
 
-        <div class="scroller">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Party</th>
-                <th scope="col">With a declared case</th>
-                <th class="meter" aria-hidden="true"></th>
-                <th scope="col">Share</th>
-                <th scope="col">Median assets</th>
-                <th scope="col">Median age</th>
-              </tr>
-            </thead>
-            <tbody>
-              {
-                parties.map((row) => (
-                  <tr>
-                    <td class="party">{row.party}</td>
-                    <td>
-                      <b>{row.withCases}</b> <span class="of">of {row.analysed}</span>
-                    </td>
-                    {/* The track is the full 0–100% range, so bar length is the share
-                        itself. Scaling to the largest party would make 61.9% draw as a
-                        full bar and read as everyone. */}
-                    <td
-                      class="meter"
-                      title={`${row.party}: ${row.pct}% — ${row.withCases} of ${row.analysed} elected`}
-                    >
-                      <div class="meter__track" aria-hidden="true">
-                        <div class="meter__fill" style={`width:${row.pct}%`} />
-                      </div>
-                    </td>
-                    <td>{pct(row.pct)}</td>
-                    <td>{rupees(row.medianAssets)}</td>
-                    <td>{years(row.medianAge)}</td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <p class="ledger__note">
-          Parties that elected fewer than {minPartySize} members are left out rather
-          than shown as a percentage: three members out of five is "60%", which is true and
-          tells you nothing next to a party that elected two hundred. Assets and age are both
-          self-declared and unaudited, summarised by median so a single very wealthy or very
-          old member does not move the figure. An age below 25 cannot be real — nobody
-          younger may sit in the Lok Sabha — so those are read as undeclared, not as zero.
+        <p class="section__standfirst">
+          Nobody is required to be rich to stand for the Lok Sabha. It simply helps
+          enormously.
         </p>
-      </section>
 
-      {
-        states.length > 0 && (
-          <section class="ledger">
-            <div class="ledger__head">
-              <h2 class="ledger__title">By state</h2>
-              <p class="caption">{latestYear} · members elected · sorted by seats</p>
-            </div>
-
-            <div class="scroller">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">State</th>
-                    <th scope="col">With a declared case</th>
-                    <th class="meter" aria-hidden="true" />
-                    <th scope="col">Share</th>
-                    <th scope="col">Median assets</th>
-                    <th scope="col">Median age</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {states.map((row) => (
-                    <tr>
-                      <td class="party">{row.state}</td>
-                      <td>
-                        <b>{row.withCases}</b> <span class="of">of {row.analysed}</span>
-                      </td>
-                      <td
-                        class="meter"
-                        title={`${row.state}: ${row.pct}% — ${row.withCases} of ${row.analysed}`}
-                      >
-                        <div class="meter__track" aria-hidden="true">
-                          <div class="meter__fill" style={`width:${row.pct}%`} />
-                        </div>
-                      </td>
-                      <td>{pct(row.pct)}</td>
-                      <td>{rupees(row.medianAssets)}</td>
-                      <td>{years(row.medianAge)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <p class="ledger__note">
-              States electing fewer than {minPartySize} members are left out. A state's figure
-              says nothing about who governs it — these are members returned to the Lok Sabha
-              from that state, across all parties.
+        <div class="split" style="margin-top:2rem">
+          <div>
+            <Distribution bands={assetBands} />
+          </div>
+          <div>
+            {
+              poorest && richest && (
+                <p class="gap" style="margin-top:0">
+                  {poorest.contestedShare.toFixed(1)}% of candidates declared under ₹1 lakh.
+                  Among members elected: <b>{poorest.wonShare.toFixed(1)}%</b>. Meanwhile{' '}
+                  {richest.wonShare.toFixed(1)}% of the chamber declared over ₹100 crore, against{' '}
+                  {richest.contestedShare.toFixed(1)}% of those who stood.
+                </p>
+              )
+            }
+            <p class="record__note">
+              Bands are logarithmic because declared wealth spans seven orders of magnitude;
+              linear buckets would put almost everyone in the first one. Assets are
+              self-declared and unaudited.
             </p>
-          </section>
-        )
-      }
+          </div>
+        </div>
+
+        <section class="ledger">
+          <Ledger
+            rows={byMoney}
+            dimension="party"
+            metric="medianAssets"
+            metricLabel="Median assets"
+            format="rupees"
+            title="Richest benches"
+            caption={`${latestYear} · median declared assets of members elected`}
+            note="Median, not mean, so a single very wealthy member does not carry a whole party."
+          />
+        </section>
+      </section>
+
+      {/* ---------------- age ---------------- */}
+
+      <section class="section" id="age">
+        <div class="section__head">
+          <p class="caption">Field 3 — Age</p>
+          <h2 class="section__title">The waiting room</h2>
+        </div>
+
+        <p class="section__standfirst">
+          India is one of the youngest countries on earth. Its parliament is not, and the gap
+          widens every election.
+        </p>
+
+        <div class="split" style="margin-top:2rem">
+          <div>
+            <Distribution bands={ageBands} />
+          </div>
+          <div>
+            {
+              youngest && (
+                <p class="gap" style="margin-top:0">
+                  Under-35s are {youngest.contestedShare.toFixed(1)}% of candidates and{' '}
+                  <b>{youngest.wonShare.toFixed(1)}%</b> of the chamber. The median member
+                  elected has aged from {timeline[0].medianAge} in {earliest.year} to{' '}
+                  {latest.medianAge} today.
+                </p>
+              )
+            }
+            <p class="record__note">
+              Age is self-declared. An age below 25 cannot be real — nobody younger may sit in
+              the Lok Sabha — so those values are read as undeclared rather than as zero,
+              which is how the source writes them.
+            </p>
+          </div>
+        </div>
+
+        <section class="ledger">
+          <Ledger
+            rows={byAge}
+            dimension="party"
+            metric="medianAge"
+            metricLabel="Median age"
+            format="years"
+            title="Oldest benches"
+            caption={`${latestYear} · median age of members elected`}
+          />
+        </section>
+      </section>
 
       <footer class="colophon">
         <div class="colophon__grid">
@@ -241,26 +258,26 @@ function rupees(value) {
             </p>
           </div>
           <div>
-            <h3>What this does not do</h3>
+            <h3>How the jokes work</h3>
             <p>
-              There is no composite score and no ranking of parties. A blended index mostly
-              encodes the weights chosen to build it, and the argument becomes about the
-              weights instead of the data.
+              The commentary is ours; the numbers are not. Every award is the top of one
+              published column, with its denominator printed underneath — there is
+              <strong> no combined score</strong> and nothing weighted.
             </p>
           </div>
           <div>
             <h3>Not yet covered</h3>
             <p>
-              No state-level breakdown: the listings carry no state, and constituency names
-              repeat across states — <strong>Aurangabad</strong> is a seat in both Bihar and
-              Maharashtra. Grouping by name alone would merge different members.
+              Central infrastructure delivery and parliamentary attendance. Project data,
+              when it lands, will never be broken down by party — a delayed highway cannot be
+              pinned on one government.
             </p>
           </div>
           <div>
             <h3>Method</h3>
             <p>
               Every figure traces to a stored document with its checksum and retrieval date.
-              Full method, denominators and limitations in
+              Denominators, caveats and known gaps in
               <a
                 href="https://github.com/udingpudding/gormint-goons/blob/main/docs/methodology.md"
                 >methodology.md</a
@@ -270,16 +287,5 @@ function rupees(value) {
         </div>
       </footer>
     </div>
-
-    <style is:global>
-      .visually-hidden {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        white-space: nowrap;
-      }
-    </style>
   </body>
 </html>

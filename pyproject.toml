@@ -46,6 +46,9 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# RUF001 flags en dashes as ambiguous. They are deliberate here: display strings carry
+# real typography ("₹1–10 crore", "25–34"), and a hyphen would be wrong in a range.
+ignore = ["RUF001"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["pipeline"]

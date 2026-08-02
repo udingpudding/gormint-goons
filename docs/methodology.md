@@ -65,12 +65,26 @@ an election. A party with three candidates, all with a declared case, is factual
 and placing that beside a party that fielded four hundred invites a comparison the numbers
 cannot support. The underlying counts are still published; only the rate is withheld.
 
-## What is deliberately not published
+## Where the site editorialises, and where it does not
 
-**No composite score. No ranking of parties.** A blended "governance index" is mostly a
-statement about the weights chosen to build it. Publish one and every conversation becomes an
-argument about those weights rather than about the data. This site publishes individually
-defined metrics with stated denominators and lets the reader do the comparing.
+The site carries an openly satirical section — an honours list awarding parties certificates
+for topping a column. The commentary around it is opinion. The figures inside it are not, and
+the boundary is structural rather than a matter of good intentions:
+
+**Every award is the maximum or minimum of one published metric**, shown with the denominator
+it was computed over. Nothing is blended. A reader who disagrees with an award is disagreeing
+with a count.
+
+**No composite score. No weighted index.** A blended "governance index" is mostly a statement
+about the weights chosen to build it. Publish one and every conversation becomes an argument
+about those weights rather than about the data.
+
+**Eligibility is fixed before the ranking, not after.** Only parties with at least 10 members
+elected are considered for an award, using the same threshold that governs every other rate
+on the site. That rule exists so a party with four seats cannot win an award on a rounding
+artefact — and it is applied whether or not it produces a funnier winner.
+
+**Party colours are used only in the honours list.** Charts stay neutral.
 
 **No party attribution for infrastructure delivery.** When project delivery data is added, it
 will be broken down by ministry, state and sector — never by political party. A delayed

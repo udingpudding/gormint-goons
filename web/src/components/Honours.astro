@@ -1,0 +1,80 @@
+---
+/*
+  The honours list.
+
+  This is the one openly editorial part of the site, and it is kept honest by construction:
+  each award is simply the top of one published column, with its denominator printed beneath.
+  There is no weighting to argue about — the joke is that the number is real and the party is
+  named. The tone is the ministry's own: a certificate nobody applied for.
+
+  Party colour appears here and nowhere else. A party without a recorded colour keeps the
+  neutral data hue rather than being assigned one, since a generated colour would imply an
+  identity the party never chose.
+*/
+import { partyColour } from '../data/parties.js';
+
+const { honours, year, minPartySize } = Astro.props;
+
+function rupees(value) {
+  if (value == null) return '—';
+  if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
+  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
+  return `₹${value.toLocaleString('en-IN')}`;
+}
+
+function show(award) {
+  if (award.unit === 'rupees') return rupees(award.value);
+  if (award.unit === 'years') return `${award.value}`;
+  return `${award.value.toFixed(1)}%`;
+}
+
+function subtitle(award) {
+  if (award.id === 'cases') return `${award.withCases} of ${award.analysed} members elected`;
+  if (award.id === 'clean') return `${award.withCases} of ${award.analysed} members elected`;
+  if (award.unit === 'rupees') return `median of ${award.analysed} members elected`;
+  return `median age of ${award.analysed} members elected`;
+}
+---
+
+<section class="honours" id="honours">
+  <div class="section__head">
+    <p class="caption">Schedule II — Certificates of distinction, {year}</p>
+    <h2 class="section__title">The honours list</h2>
+  </div>
+
+  <p class="section__standfirst">
+    Awarded annually by nobody, to parties that did not apply. Each citation is the top of a
+    single column on this page — no scores are combined, and no weights are involved, so the
+    only thing available to dispute is the arithmetic.
+  </p>
+
+  <div class="honours__grid">
+    {
+      honours.map((award) => (
+        <article class="award" style={`--award:${partyColour(award.party)}`}>
+          <h3 class="award__title">{award.title}</h3>
+          <p class="award__party">
+            <span class="award__swatch" aria-hidden="true" />
+            {award.party}
+          </p>
+          <p class="award__figure">{show(award)}</p>
+          <p class="award__of">{subtitle(award)}</p>
+          <p class="award__citation">{award.citation}</p>
+          {award.runnersUp.length > 0 && (
+            <p class="award__runners">
+              Also considered: {award.runnersUp.map((r) => r.party).join(', ')}
+            </p>
+          )}
+        </article>
+      ))
+    }
+  </div>
+
+  <p class="disclaimer">
+    <b>Read this bit.</b> A declared case is one the member disclosed as pending when they
+    filed their affidavit. It is <b>not a conviction</b>, and the count includes cases arising
+    from protest and agitation alongside serious alleged offences. Parties that elected fewer
+    than {minPartySize} members are not eligible, because a percentage over four seats is a
+    punchline rather than a finding. The figures are real; the certificates are not.
+  </p>
+</section>

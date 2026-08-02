@@ -1,0 +1,51 @@
+---
+/*
+  Two distributions read against each other: everyone who stood, and the subset who won.
+
+  Paired horizontal bars rather than a single stacked bar, because the question is not "how
+  is the whole split" but "does the winners' shape differ from everyone's". Bars are scaled
+  to the largest share in the chart so the difference is visible; each carries its own value
+  as a direct label, so nothing depends on estimating a length.
+*/
+const { bands, allLabel = 'All candidates', wonLabel = 'Members elected' } = Astro.props;
+
+const peak = Math.max(...bands.flatMap((b) => [b.contestedShare, b.wonShare]), 1);
+const width = (share) => `${(share / peak) * 100}%`;
+---
+
+<ul class="legend">
+  <li><i class="all"></i> {allLabel}</li>
+  <li><i class="won"></i> {wonLabel}</li>
+</ul>
+
+<div class="dist">
+  {
+    bands.map((band) => (
+      <div class="dist__row">
+        <span class="dist__label">{band.label}</span>
+        <div class="dist__pair">
+          <div class="dist__bar">
+            <span
+              class="dist__fill dist__fill--all"
+              style={`width:${width(band.contestedShare)}`}
+              aria-hidden="true"
+            />
+            <span class="dist__value">
+              {band.contestedShare}% <span class="of">({band.contested.toLocaleString('en-IN')})</span>
+            </span>
+          </div>
+          <div class="dist__bar">
+            <span
+              class="dist__fill dist__fill--won"
+              style={`width:${width(band.wonShare)}`}
+              aria-hidden="true"
+            />
+            <span class="dist__value">
+              {band.wonShare}% <span class="of">({band.won.toLocaleString('en-IN')})</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    ))
+  }
+</div>

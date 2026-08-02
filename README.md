@@ -6,27 +6,38 @@
 > incomplete, numbers are unreviewed, and nothing here should be cited yet. This banner
 > comes down when the methodology page is finished.
 
-Slice twenty years of Indian governance data by party, state, sector and year — criminal
-cases declared by candidates, delivery on central infrastructure projects, and participation
-in Parliament.
+Twenty years of Indian governance data, sliced by party, state and year — criminal cases,
+declared wealth and age, all taken from candidates' own sworn affidavits.
 
-Every figure on the site traces back to a stored original document. Nothing is estimated,
-modelled, or editorialised.
+Every figure traces back to a stored original document. Nothing is estimated or modelled.
+The commentary is ours; the numbers are not.
 
 ---
 
-## What this is not
+## The line between the jokes and the data
 
-This project publishes **no composite score and no ranking of parties.** There is no "worst
-party" number, because any such number is mostly a statement about how you chose to weight
-its inputs. The site shows individual, defined metrics with explicit denominators, and lets
-you do the comparing.
+The site has an openly editorial section — an honours list handing parties certificates they
+did not apply for. It is kept honest by construction:
 
-**Project delivery data is never broken down by political party.** A delayed central-sector
-highway cannot be cleanly attributed to a state government, the central government, or the
-contractor — so this project does not pretend otherwise. Infrastructure metrics are cut by
-ministry, state and sector only. Party appears only where the link is documentary: a named
-candidate, their party, and the affidavit they personally signed.
+**Every award is the top of one published column**, with its denominator printed underneath.
+There is **no composite score and no weighting** anywhere in this project, because a blended
+index mostly encodes the weights chosen to build it, and then the argument is about the
+weights instead of the data. The only thing available to dispute in an award is the
+arithmetic.
+
+**A declared case is not a conviction.** It is a case the member disclosed as pending when
+they filed. The count includes cases arising from protest and agitation alongside serious
+alleged offences. That caveat travels with every figure on the site, including the jokes.
+
+**Party colours appear in exactly one place** — the honours list, where naming the party is
+the point. Every chart stays a neutral hue, because a chart coloured by allegiance stops
+being read as a chart.
+
+**Project delivery data will never be broken down by political party.** A delayed
+central-sector highway cannot be cleanly attributed to a state government, the central
+government, or the contractor. Infrastructure metrics are cut by ministry, state and sector
+only. Party appears only where the link is documentary: a named candidate, their party, and
+the affidavit they personally signed.
 
 ---
 

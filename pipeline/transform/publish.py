@@ -75,7 +75,7 @@ def publish_all() -> dict[str, int]:
         frame.write_parquet(paths.PUBLIC / name)
         outputs[name] = frame.height
 
-    outputs |= _write_site_json(totals, parties, states)
+    outputs |= _write_site_json(candidates, totals, parties, states)
     return outputs
 
 
@@ -187,6 +187,155 @@ def reconcile(everything: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+# -- distributions ---------------------------------------------------------------------
+
+#: Declared wealth spans seven orders of magnitude, so bands are logarithmic. Linear buckets
+#: would put ninety-odd percent of candidates in the first one and say nothing.
+ASSET_BANDS: tuple[tuple[str, int, int | None], ...] = (
+    ("Under ₹1 lakh", 0, 100_000),
+    ("₹1–10 lakh", 100_000, 1_000_000),
+    ("₹10 lakh–1 crore", 1_000_000, 10_000_000),
+    ("₹1–10 crore", 10_000_000, 100_000_000),
+    ("₹10–100 crore", 100_000_000, 1_000_000_000),
+    ("Over ₹100 crore", 1_000_000_000, None),
+)
+
+AGE_BANDS: tuple[tuple[str, int, int | None], ...] = (
+    ("25–34", 25, 35),
+    ("35–44", 35, 45),
+    ("45–54", 45, 55),
+    ("55–64", 55, 65),
+    ("65–74", 65, 75),
+    ("75+", 75, None),
+)
+
+
+def _band(candidates: pl.DataFrame, column: str, bands, year: int) -> list[dict]:
+    """Count candidates and winners falling in each band, for one election.
+
+    Both cohorts share the band definition so the two distributions can be read against each
+    other — the whole point is the shape of the winners' distribution against everyone's.
+    """
+    rows = candidates.filter((pl.col("election_year") == year) & pl.col(column).is_not_null())
+    contested_total = rows.height
+    won_total = rows.filter(pl.col("is_winner")).height
+
+    out = []
+    for label, low, high in bands:
+        in_band = pl.col(column) >= low
+        if high is not None:
+            in_band = in_band & (pl.col(column) < high)
+        contested = rows.filter(in_band).height
+        won = rows.filter(in_band & pl.col("is_winner")).height
+        out.append(
+            {
+                "label": label,
+                "contested": contested,
+                "won": won,
+                "contestedShare": round(contested / contested_total * 100, 1)
+                if contested_total
+                else 0.0,
+                "wonShare": round(won / won_total * 100, 1) if won_total else 0.0,
+            }
+        )
+    return out
+
+
+# -- the honours list --------------------------------------------------------------------
+
+#: Each award is the maximum (or minimum) of one published metric — never a blend of several.
+#: That keeps the joke arguable only on the facts: there are no weights to dispute, just a
+#: party sitting at the top of a column it would rather not top.
+AWARDS: tuple[dict, ...] = (
+    {
+        "id": "cases",
+        "title": "The Rap Sheet",
+        "citation": "For the largest share of members arriving with a pending criminal case.",
+        "metric": "pct_with_declared_cases",
+        "unit": "percent",
+        "descending": True,
+    },
+    {
+        "id": "money",
+        "title": "The Moneybags",
+        "citation": "For the highest median declared fortune among members elected.",
+        "metric": "median_assets_rupees",
+        "unit": "rupees",
+        "descending": True,
+    },
+    {
+        "id": "age",
+        "title": "The Long Service Medal",
+        "citation": "For the highest median age, in a chamber that keeps getting older.",
+        "metric": "median_age",
+        "unit": "years",
+        "descending": True,
+    },
+    {
+        "id": "clean",
+        "title": "The Unblemished",
+        "citation": (
+            "For the smallest share of members with a pending case. Somebody has to win it."
+        ),
+        "metric": "pct_with_declared_cases",
+        "unit": "percent",
+        "descending": False,
+    },
+)
+
+
+def honours(parties: pl.DataFrame, year: int) -> list[dict]:
+    """Pick the party topping each column, for the most recent election."""
+    eligible = parties.filter(
+        (pl.col("election_year") == year)
+        & (pl.col("cohort") == "won")
+        & (pl.col("candidates") >= MIN_CANDIDATES_FOR_RATE)
+    )
+    if eligible.is_empty():
+        return []
+
+    out = []
+    for award in AWARDS:
+        ranked = eligible.filter(pl.col(award["metric"]).is_not_null()).sort(
+            award["metric"], descending=award["descending"]
+        )
+        if ranked.is_empty():
+            continue
+        row = ranked.to_dicts()[0]
+        runners = [
+            {
+                "party": r["party"],
+                "value": _award_value(r[award["metric"]], award["unit"]),
+                "analysed": r["candidates"],
+            }
+            for r in ranked.to_dicts()[1:4]
+        ]
+        out.append(
+            {
+                "id": award["id"],
+                "title": award["title"],
+                "citation": award["citation"],
+                "unit": award["unit"],
+                "party": row["party"],
+                "value": _award_value(row[award["metric"]], award["unit"]),
+                "withCases": row["with_declared_cases"],
+                "analysed": row["candidates"],
+                "runnersUp": runners,
+            }
+        )
+    return out
+
+
+def _award_value(value, unit: str):
+    if value is None:
+        return None
+    if unit == "rupees":
+        return int(value)
+    if unit == "years":
+        return round(value)
+    return round(float(value), 1)
+
+
 # -- site payload ----------------------------------------------------------------------
 
 
@@ -197,7 +346,10 @@ def _int_or_none(value) -> int | None:
 
 
 def _write_site_json(
-    totals: pl.DataFrame, parties: pl.DataFrame, states: pl.DataFrame
+    candidates: pl.DataFrame,
+    totals: pl.DataFrame,
+    parties: pl.DataFrame,
+    states: pl.DataFrame,
 ) -> dict[str, int]:
     """Emit the small JSON the headline page reads.
 
@@ -253,12 +405,24 @@ def _write_site_json(
 
     # Deliberately carries no build timestamp: it would change on every run and fill the git
     # history with diffs that say nothing. The manifest records when each page was retrieved.
+    def by_metric(metric: str) -> list[dict]:
+        """Parties ranked by one column, for the money and age sections."""
+        return sorted(
+            rows_for(parties, "party"),
+            key=lambda r: (r.get(metric) is None, -(r.get(metric) or 0)),
+        )
+
     payload = {
         "latestYear": latest_year,
         "minPartySize": MIN_CANDIDATES_FOR_RATE,
         "timeline": timeline,
         "parties": rows_for(parties, "party"),
         "states": rows_for(states, "state"),
+        "byMoney": by_metric("medianAssets"),
+        "byAge": by_metric("medianAge"),
+        "assetBands": _band(candidates, "assets_rupees", ASSET_BANDS, latest_year),
+        "ageBands": _band(candidates, "age", AGE_BANDS, latest_year),
+        "honours": honours(parties, latest_year),
     }
     (SITE_DATA / "headline.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
